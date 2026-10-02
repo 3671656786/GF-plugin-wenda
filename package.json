@@ -1,0 +1,16 @@
+{
+  "name": "GF-plugin-wenda",
+  "plugin": "问答系统",
+  "version": "1.1.0",
+  "type": "module",
+  "main": "index.mjs",
+  "description": "QQ 官方机器人问答：本群 / 全局 / 私聊，精准与模糊；答案支持文字与图片等二改功能，菜单名：问答系统/菜单 / 问答帮助 / 问答指南",
+  "author": "天道化逍遥",
+  "license": "MIT",
+  "keywords": [
+    "kakake",
+    "gf",
+    "qq-official",
+    "qa"
+  ]
+}
