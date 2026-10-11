@@ -2,18 +2,12 @@ import ln from "node:crypto";
 import w from "node:fs";
 import d from "node:path";
 
-function R(n) {
-  return String(n ?? "").trim();
-}
+function R(n) { return String(n ?? "").trim(); }
 
 function getConfig(n) {
   const e = R(n.configPath);
   if (!e || !w.existsSync(e)) return {};
-  try {
-    return JSON.parse(w.readFileSync(e, "utf-8"));
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(w.readFileSync(e, "utf-8")); } catch { return {}; }
 }
 
 function saveConfig(n, updater) {
@@ -24,14 +18,25 @@ function saveConfig(n, updater) {
     updater(config);
     w.writeFileSync(e, JSON.stringify(config, null, 2), "utf-8");
     return true;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 function Tn(n) {
   const config = getConfig(n);
-  return R(config?.ownerOpenId) || "7014ACA9441AF768BC9E9D5EED7EAE9B";
+  return R(config?.ownerOpenId) || "6E0B188704AC0611617425B687DB9034";
+}
+
+function getMasters(n) {
+  const config = getConfig(n);
+  return Array.isArray(config.masters) ? config.masters.filter(Boolean) : [];
+}
+
+function getBotOpenId(n) {
+  const config = getConfig(n);
+  if (config?.botOpenId) return R(config.botOpenId);
+  try {
+    return R(n?.account?.openid || n?.robot?.openid || n?.botOpenId || n?.selfOpenId || "");
+  } catch { return ""; }
 }
 
 function getAtReplySetting(n, t) {
@@ -42,9 +47,7 @@ function getAtReplySetting(n, t) {
     }
     return config.replyAtGlobal !== false;
   }
-  if (config.replyAtPrivate !== undefined) {
-    return config.replyAtPrivate;
-  }
+  if (config.replyAtPrivate !== undefined) return config.replyAtPrivate;
   return config.replyAtGlobal !== false;
 }
 
@@ -61,14 +64,10 @@ function setAtReplySetting(n, t, val) {
 
 function j(n) {
   const e = n.author && typeof n.author == "object" ? n.author : {};
-  return R(
-    n.user_openid ?? n.group_member_openid ?? n.member_openid ?? n.op_member_openid ?? n.openid ?? e.user_openid ?? e.member_openid ?? e.union_openid ?? e.id
-  );
+  return R(n.user_openid ?? n.group_member_openid ?? n.member_openid ?? n.op_member_openid ?? n.openid ?? e.user_openid ?? e.member_openid ?? e.union_openid ?? e.id);
 }
 
-function S(n) {
-  return R(n.group_openid ?? n.group_open_id);
-}
+function S(n) { return R(n.group_openid ?? n.group_open_id); }
 
 function On(n) {
   const e = String(n ?? "").trim().toLowerCase();
@@ -112,14 +111,19 @@ function Un(n) {
   return !t || !r ? "" : I.get(t)?.get(r) || "";
 }
 
-function P(n, e) {
+function isOwnerOnly(n, e) {
   const t = Tn(n), r = j(e);
   return !!t && !!r && t === r;
 }
 
-function Y(n, e) {
-  return P(n, e);
+function P(n, e) {
+  if (isOwnerOnly(n, e)) return true;
+  const r = j(e);
+  if (!r) return false;
+  return getMasters(n).includes(r);
 }
+
+function Y(n, e) { return P(n, e); }
 
 function B(n, e) {
   if (P(n, e)) return !0;
@@ -129,9 +133,7 @@ function B(n, e) {
 
 const J = "问答系统";
 
-function Ln(n) {
-  w.mkdirSync(d.dirname(n), { recursive: !0 });
-}
+function Ln(n) { w.mkdirSync(d.dirname(n), { recursive: !0 }); }
 
 function Q(n) {
   const e = String(n.dataPath || "").trim();
@@ -140,17 +142,11 @@ function Q(n) {
   return t ? d.join(t, "data") : d.resolve("data");
 }
 
-function mn(n) {
-  return String(n ?? "").trim().replace(/[\\/:*?"<>|]/g, "_").slice(0, 120) || "unknown";
-}
+function mn(n) { return String(n ?? "").trim().replace(/[\\/:*?"<>|]/g, "_").slice(0, 120) || "unknown"; }
 
-function k(n, e, t) {
-  return d.join(Q(n), J, mn(e), `${t}.json`);
-}
+function k(n, e, t) { return d.join(Q(n), J, mn(e), `${t}.json`); }
 
-function gn(n, e) {
-  return d.join(Q(n), J, mn(e), "撤回时间.json");
-}
+function gn(n, e) { return d.join(Q(n), J, mn(e), "撤回时间.json"); }
 
 function Z(n, e) {
   const t = A(gn(n, e)).seconds;
@@ -159,17 +155,11 @@ function Z(n, e) {
   return !Number.isInteger(r) || r < 0 || r > 600 ? 0 : r;
 }
 
-function Dn(n, e, t) {
-  U(gn(n, e), { seconds: String(t) });
-}
+function Dn(n, e, t) { U(gn(n, e), { seconds: String(t) }); }
 
-function x(n) {
-  return d.join(Q(n), J, "图片数据");
-}
+function x(n) { return d.join(Q(n), J, "图片数据"); }
 
-function V(n) {
-  return d.join(x(n), "urls.json");
-}
+function V(n) { return d.join(x(n), "urls.json"); }
 
 function z(n, e, t) {
   const r = d.basename(String(e || "").trim()), o = String(t || "").trim();
@@ -189,12 +179,9 @@ function A(n) {
     const e = JSON.parse(w.readFileSync(n, "utf-8"));
     if (!e || typeof e != "object" || Array.isArray(e)) return {};
     const t = {};
-    for (const [r, o] of Object.entries(e))
-      t[String(r)] = String(o ?? "");
+    for (const [r, o] of Object.entries(e)) t[String(r)] = String(o ?? "");
     return t;
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
 function U(n, e) {
@@ -214,8 +201,7 @@ function q(n, e) {
 
 function Bn(n, e, t, r) {
   const o = A(k(n, e, t));
-  if (Object.prototype.hasOwnProperty.call(o, r))
-    return o[r];
+  if (Object.prototype.hasOwnProperty.call(o, r)) return o[r];
 }
 
 function qn(n, e, t, r, o) {
@@ -228,9 +214,7 @@ function Nn(n, e, t, r) {
   return Object.prototype.hasOwnProperty.call(i, r) ? (delete i[r], U(o, i), !0) : !1;
 }
 
-function N(n, e, t) {
-  U(k(n, e, t), {});
-}
+function N(n, e, t) { U(k(n, e, t), {}); }
 
 function zn(n, e) {
   N(n, "全局", e), N(n, "私聊", e);
@@ -240,9 +224,7 @@ function zn(n, e) {
     if (!w.existsSync(t)) return 0;
     for (const o of w.readdirSync(t, { withFileTypes: !0 }))
       o.isDirectory() && (o.name === "全局" || o.name === "私聊" || o.name === "图片数据" || (N(n, o.name, e), r += 1));
-  } catch (o) {
-    n.logger?.warn?.("[GF_qa] 清空全部扫描失败", o?.message || o);
-  }
+  } catch (o) { n.logger?.warn?.("[GF_qa] 清空全部扫描失败", o?.message || o); }
   return r;
 }
 
@@ -264,13 +246,9 @@ function Hn(n, e = 80) {
 
 const hn = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.95 Safari/537.36";
 
-function Jn(n, e) {
-  return { code: 0, msg: "success", data: { url: e, source: n } };
-}
+function Jn(n, e) { return { code: 0, msg: "success", data: { url: e, source: n } }; }
 
-function K(n) {
-  return { code: -1, msg: n };
-}
+function K(n) { return { code: -1, msg: n }; }
 
 function Qn() {
   const n = ln.randomBytes(16).toString("hex");
@@ -293,14 +271,7 @@ function on(n) {
 }
 
 function Yn(n) {
-  return {
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    bmp: "image/bmp",
-    webp: "image/webp"
-  }[n.toLowerCase()] || "application/octet-stream";
+  return { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", bmp: "image/bmp", webp: "image/webp" }[n.toLowerCase()] || "application/octet-stream";
 }
 
 async function Kn(n) {
@@ -315,29 +286,12 @@ async function Kn(n) {
     return { buffer: t, filename: r };
   }
   if (n.url) {
-    const e = await fetch(n.url, {
-      redirect: "follow",
-      headers: {
-        "User-Agent": hn,
-        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
-      }
-    });
+    const e = await fetch(n.url, { redirect: "follow", headers: { "User-Agent": hn, Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" } });
     if (!e.ok) throw new Error(`下载图片失败 HTTP ${e.status}`);
     const t = await e.arrayBuffer(), r = Buffer.from(t);
     let o = n.filename || "upload.jpg";
-    try {
-      const a = new URL(n.url), u = d.basename(a.pathname);
-      u && u.includes(".") && (o = u);
-    } catch {
-    }
-    const i = String(e.headers.get("content-type") || "").split(";")[0].trim().toLowerCase(), c = {
-      "image/png": "png",
-      "image/gif": "gif",
-      "image/jpeg": "jpg",
-      "image/jpg": "jpg",
-      "image/webp": "webp",
-      "image/bmp": "bmp"
-    }[i];
+    try { const a = new URL(n.url), u = d.basename(a.pathname); u && u.includes(".") && (o = u); } catch {}
+    const i = String(e.headers.get("content-type") || "").split(";")[0].trim().toLowerCase(), c = { "image/png": "png", "image/gif": "gif", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp", "image/bmp": "bmp" }[i];
     return c && (o = `${String(o).replace(/\.[^.]+$/, "") || "upload"}.${c}`), { buffer: r, filename: o };
   }
   throw new Error("缺少图片内容（buffer / filepath / url）");
@@ -345,48 +299,16 @@ async function Kn(n) {
 
 async function Xn(n, e) {
   const t = d.extname(e).replace(/^\./, "").toLowerCase();
-  if (!["jpg", "jpeg", "png", "gif", "bmp"].includes(t))
-    throw new Error("58同城不支持该格式");
-  const r = `58Anonymous${Qn()}`, o = {
-    user_id: r,
-    source: "14",
-    im_token: r,
-    client_version: "1.0",
-    client_type: "pcweb",
-    os_type: "Chrome",
-    os_version: "122.0.6261.95",
-    appid: "10140-mcs@jitmouQrcHs",
-    extend_flag: "0",
-    unread_index: "1",
-    sdk_version: "6432",
-    device_id: r,
-    xxzl_smartid: "",
-    id58: "CkwAd2e0U3tBNxbRAzQ2Ag=="
-  }, i = on(new URLSearchParams(o).toString()), s = on(
-    JSON.stringify({
-      sender_id: r,
-      sender_source: 14,
-      to_id: "10002",
-      to_source: 100,
-      file_suffixs: [t]
-    })
-  ), c = `https://im.58.com/msg/get_pic_upload_url?params=${encodeURIComponent(i)}&version=j1.0`, u = await (await fetch(c, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=UTF-8",
-      Origin: "https://ai.58.com",
-      Referer: "https://ai.58.com/pc/",
-      "User-Agent": hn
-    },
-    body: s
-  })).text(), f = JSON.parse(u);
-  if (f?.error_code !== 0 || !f?.data?.upload_info?.[0]?.url)
-    throw new Error(f?.error_msg || "58同城获取上传地址失败");
-  const p = String(f.data.upload_info[0].url), y = await fetch(p, {
-    method: "PUT",
-    headers: { "Content-Type": Yn(t) },
-    body: new Uint8Array(n)
-  });
+  if (!["jpg", "jpeg", "png", "gif", "bmp"].includes(t)) throw new Error("58同城不支持该格式");
+  const r = `58Anonymous${Qn()}`, o = { user_id: r, source: "14", im_token: r, client_version: "1.0", client_type: "pcweb", os_type: "Chrome", os_version: "122.0.6261.95", appid: "10140-mcs@jitmouQrcHs", extend_flag: "0", unread_index: "1", sdk_version: "6432", device_id: r, xxzl_smartid: "", id58: "CkwAd2e0U3tBNxbRAzQ2Ag==" };
+  const i = on(new URLSearchParams(o).toString());
+  const s = on(JSON.stringify({ sender_id: r, sender_source: 14, to_id: "10002", to_source: 100, file_suffixs: [t] }));
+  const c = `https://im.58.com/msg/get_pic_upload_url?params=${encodeURIComponent(i)}&version=j1.0`;
+  const u = await (await fetch(c, { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8", Origin: "https://ai.58.com", Referer: "https://ai.58.com/pc/", "User-Agent": hn }, body: s })).text();
+  const f = JSON.parse(u);
+  if (f?.error_code !== 0 || !f?.data?.upload_info?.[0]?.url) throw new Error(f?.error_msg || "58同城获取上传地址失败");
+  const p = String(f.data.upload_info[0].url);
+  const y = await fetch(p, { method: "PUT", headers: { "Content-Type": Yn(t) }, body: new Uint8Array(n) });
   if (!y.ok) throw new Error(`58同城上传失败 HTTP ${y.status}`);
   const g = "/nowater/im/", $ = p.indexOf(g);
   if ($ < 0) throw new Error("58同城上传地址解析失败");
@@ -397,11 +319,7 @@ async function Xn(n, e) {
 async function Vn(n, e) {
   const t = new FormData();
   t.append("name", e), t.append("uuid", `o_${Wn(27)}`), t.append("sign", String(Math.floor(Date.now() / 1e3))), t.append("file", new Blob([new Uint8Array(n)]), e);
-  const o = await (await fetch("https://img.wnflb2023.com/application/upload.php", {
-    method: "POST",
-    body: t,
-    headers: { Referer: "https://img.wnflb2023.com/" }
-  })).json();
+  const o = await (await fetch("https://img.wnflb2023.com/application/upload.php", { method: "POST", body: t, headers: { Referer: "https://img.wnflb2023.com/" } })).json();
   if (o?.code === 200 && o?.url) return String(o.url);
   throw new Error(o?.message || "fuliba 上传失败");
 }
@@ -409,56 +327,35 @@ async function Vn(n, e) {
 async function Zn(n, e) {
   const t = new FormData();
   t.append("image", new Blob([new Uint8Array(n)]), e);
-  const o = await (await fetch("https://imgdd.com/upload", {
-    method: "POST",
-    body: t,
-    headers: { Referer: "https://imgdd.com/" }
-  })).json();
+  const o = await (await fetch("https://imgdd.com/upload", { method: "POST", body: t, headers: { Referer: "https://imgdd.com/" } })).json();
   if (o?.url) return String(o.url);
   throw new Error(o?.message || "IMGDD 上传失败");
 }
 
 async function wn(n) {
   let e, t;
-  try {
-    ({ buffer: e, filename: t } = await Kn(n));
-  } catch (i) {
-    return K(i instanceof Error ? i.message : String(i));
+  try { ({ buffer: e, filename: t } = await Kn(n)); } catch (i) { return K(i instanceof Error ? i.message : String(i)); }
+  if (e.length > 10 * 1024 * 1024) return K("文件最大10M");
+  const r = [{ source: "cdn58", fn: () => Xn(e, t) }, { source: "pngcm", fn: () => Vn(e, t) }, { source: "imgdd", fn: () => Zn(e, t) }], o = [];
+  for (const i of r) {
+    try { const s = await i.fn(); return Jn(i.source, s); }
+    catch (s) { o.push(`${i.source}: ${s instanceof Error ? s.message : String(s)}`); }
   }
-  if (e.length > 10 * 1024 * 1024)
-    return K("文件最大10M");
-  const r = [
-    { source: "cdn58", fn: () => Xn(e, t) },
-    { source: "pngcm", fn: () => Vn(e, t) },
-    { source: "imgdd", fn: () => Zn(e, t) }
-  ], o = [];
-  for (const i of r)
-    try {
-      const s = await i.fn();
-      return Jn(i.source, s);
-    } catch (s) {
-      o.push(`${i.source}: ${s instanceof Error ? s.message : String(s)}`);
-    }
   return K(o.join(" | ") || "全部图床上传失败");
 }
 
-function h(n) {
-  return String(n ?? "").trim();
-}
+function h(n) { return String(n ?? "").trim(); }
 
 const _n = /<@!?([A-Za-z0-9_]+)>/g;
 
-function xn(n) {
-  return n.replace(_n, "").replace(/\s+/g, " ").trim();
-}
+function xn(n) { return n.replace(_n, "").replace(/\s+/g, " ").trim(); }
 
-function yn(n) {
-  return String(n.content ?? "").replace(_n, "").replace(/^\s+/, "").replace(/\s+$/, "");
-}
+function yn(n) { return String(n.content ?? "").replace(_n, "").replace(/^\s+/, "").replace(/\s+$/, ""); }
 
-function vn(n) {
-  return xn(String(n.content ?? ""));
-}
+function vn(n) { return xn(String(n.content ?? "")); }
+
+// 指令前缀兼容：允许用 / 或 ／ 开头，例如 /问答系统、/添加精准问答#你好#你好呀
+function stripSlash(n) { return String(n ?? "").replace(/^[\s\/／]+/, "").trim(); }
 
 function ne(n) {
   const e = h(n.t);
@@ -487,13 +384,9 @@ async function E(n, e, t = {}) {
 
 const te = 5;
 
-function sn(n) {
-  delete n.msg_id, delete n.event_id, delete n.next_msg_seq;
-}
+function sn(n) { delete n.msg_id, delete n.event_id, delete n.next_msg_seq; }
 
-function re(n) {
-  return n.includes("被动回复") && n.includes("超过限制");
-}
+function re(n) { return n.includes("被动回复") && n.includes("超过限制"); }
 
 function oe(n) {
   if (n.scope === "group") {
@@ -534,23 +427,14 @@ function cn(n, e, t) {
   return nn(r, n), n.event_id ? r.event_id = n.event_id : n.msg_id && (r.msg_id = n.msg_id, t != null && (r.msg_seq = t)), r;
 }
 
-function se(n) {
-  return !n.msg_id && !n.event_id ? !0 : (n.next_msg_seq ?? 1) > te;
-}
+function se(n) { return !n.msg_id && !n.event_id ? !0 : (n.next_msg_seq ?? 1) > te; }
 
 const ce = 3.5 * 1024 * 1024, ae = 10002432;
 
-function D(n, e) {
-  return ln.createHash(n).update(e).digest("hex");
-}
+function D(n, e) { return ln.createHash(n).update(e).digest("hex"); }
 
 async function ue(n, e, t) {
-  const r = {
-    file_type: 1,
-    srv_send_msg: !1,
-    file_data: t.toString("base64"),
-    url: ""
-  };
+  const r = { file_type: 1, srv_send_msg: !1, file_data: t.toString("base64"), url: "" };
   nn(r, e);
   const o = bn(e), i = await E(n, `${o}/files`, r), s = h(i?.file_info);
   if (!s) throw new Error("富媒体上传未返回 file_info");
@@ -558,47 +442,23 @@ async function ue(n, e, t) {
 }
 
 async function fe(n, e, t, r) {
-  const o = D("md5", t), i = D("sha1", t), s = D("md5", t.subarray(0, Math.min(t.length, ae))), c = bn(e), a = await E(n, `${c}/upload_prepare`, {
-    file_type: 1,
-    file_size: String(t.length),
-    file_name: r,
-    md5: o,
-    sha1: i,
-    md5_10m: s
-  }), u = h(a?.upload_id);
+  const o = D("md5", t), i = D("sha1", t), s = D("md5", t.subarray(0, Math.min(t.length, ae))), c = bn(e), a = await E(n, `${c}/upload_prepare`, { file_type: 1, file_size: String(t.length), file_name: r, md5: o, sha1: i, md5_10m: s });
+  const u = h(a?.upload_id);
   if (!u) throw new Error("upload_prepare 未返回 upload_id");
   const f = Array.isArray(a.parts) ? a.parts : [];
   if (!f.length) throw new Error("upload_prepare 未返回分片 parts");
-  const p = Number(a.block_size) || 5 * 1024 * 1024, y = [...f].sort(
-    (m, b) => (typeof m.index == "number" ? m.index : 0) - (typeof b.index == "number" ? b.index : 0)
-  );
+  const p = Number(a.block_size) || 5 * 1024 * 1024, y = [...f].sort((m, b) => (typeof m.index == "number" ? m.index : 0) - (typeof b.index == "number" ? b.index : 0));
   let g = 0;
   for (const m of y) {
     const b = typeof m.index == "number" ? m.index : 0, rn = h(m.presigned_url);
     if (!rn) throw new Error(`分片 ${b} 缺少预签名 URL`);
     const Pn = Number(m.block_size) || Math.min(p, t.length - g), L = t.subarray(g, Math.min(g + Pn, t.length));
     g += L.length;
-    const W = await fetch(rn, {
-      method: "PUT",
-      body: new Uint8Array(L)
-    });
-    if (!W.ok) {
-      const Cn = await W.text().catch(() => "");
-      throw new Error(`分片 PUT 失败 ${W.status}: ${Cn.slice(0, 200)}`);
-    }
-    await E(n, `${c}/upload_part_finish`, {
-      upload_id: u,
-      part_index: b,
-      block_size: String(L.length),
-      md5: D("md5", L)
-    });
+    const W = await fetch(rn, { method: "PUT", body: new Uint8Array(L) });
+    if (!W.ok) { const Cn = await W.text().catch(() => ""); throw new Error(`分片 PUT 失败 ${W.status}: ${Cn.slice(0, 200)}`); }
+    await E(n, `${c}/upload_part_finish`, { upload_id: u, part_index: b, block_size: String(L.length), md5: D("md5", L) });
   }
-  const $ = {
-    file_type: 1,
-    srv_send_msg: !1,
-    upload_id: u,
-    file_name: r
-  };
+  const $ = { file_type: 1, srv_send_msg: !1, upload_id: u, file_name: r };
   nn($, e);
   const M = await E(n, `${c}/files`, $), C = h(M?.file_info);
   if (!C) throw new Error("分片合并未返回 file_info");
@@ -617,11 +477,7 @@ async function le(n, e, t) {
   if (!r.length) throw new Error(`本地图片为空: ${t}`);
   const o = d.basename(t) || "image.png";
   if (r.length <= ce)
-    try {
-      return await ue(n, e, r);
-    } catch (i) {
-      n.logger?.warn?.("[GF_qa] file_data 上传失败，改分片:", i?.message || i);
-    }
+    try { return await ue(n, e, r); } catch (i) { n.logger?.warn?.("[GF_qa] file_data 上传失败，改分片:", i?.message || i); }
   return fe(n, e, r, o);
 }
 
@@ -634,9 +490,7 @@ function pe(n) {
   try {
     const e = new URL(n).hostname.toLowerCase();
     return e.includes("qq.com") || e.includes("gtimg") || e.includes("qpic.cn") ? !1 : /^https?:\/\//i.test(n);
-  } catch {
-    return !1;
-  }
+  } catch { return !1; }
 }
 
 async function En(n, e, t) {
@@ -645,8 +499,7 @@ async function En(n, e, t) {
   const o = Sn(n, e);
   if (w.existsSync(o)) {
     const s = await wn({ filepath: o, filename: d.basename(o) });
-    if (s.code === 0 && s.data?.url)
-      return z(n, e, s.data.url), s.data.url;
+    if (s.code === 0 && s.data?.url) return z(n, e, s.data.url), s.data.url;
     n.logger?.warn?.("[GF_qa] 图床上传失败:", s.msg);
   }
   const i = String(r || "").trim();
@@ -657,10 +510,7 @@ async function An(n, e, t = 96) {
   const r = v(e);
   let o = "";
   for (const i of r) {
-    if (i.kind === "text") {
-      o += i.text;
-      continue;
-    }
+    if (i.kind === "text") { o += i.text; continue; }
     const s = await En(n, i.file);
     o += s ? `\n${$n(s, t)}\n` : " [图片] ";
   }
@@ -669,40 +519,32 @@ async function An(n, e, t = 96) {
 
 async function an(n, e, t, r) {
   const o = oe(e);
-  if (t.kind === "markdown")
-    return E(n, o, cn(e, {
-      content: "1",
-      msg_type: 2,
-      markdown: { content: t.content }
-    }, r));
+  if (t.kind === "markdown") {
+    const i = { content: "1", msg_type: 2, markdown: { content: t.content } };
+    t.keyboard && (i.keyboard = { content: t.keyboard });
+    return E(n, o, cn(e, i, r));
+  }
   const i = await le(n, e, t.absPath);
-  return E(n, o, cn(e, {
-    msg_type: 7,
-    media: { file_info: i }
-  }, r));
+  return E(n, o, cn(e, { msg_type: 7, media: { file_info: i } }, r));
 }
 
 async function Rn(n, e, t) {
   se(e) && (e.msg_id || e.event_id) && sn(e);
   const r = !!(e.msg_id || e.event_id), o = ie(e);
-  try {
-    return await an(n, e, t, o);
-  } catch (i) {
+  try { return await an(n, e, t, o); }
+  catch (i) {
     const s = i instanceof Error ? i.message : String(i);
-    if (r && re(s))
-      return sn(e), n.logger?.warn?.("[GF_qa] 被动超限，改为主动重试:", s), an(n, e, t, void 0);
+    if (r && re(s)) return sn(e), n.logger?.warn?.("[GF_qa] 被动超限，改为主动重试:", s), an(n, e, t, void 0);
     throw i;
   }
 }
 
-async function G(n, e, t) {
-  const r = String(t ?? "").trim();
-  return r ? Mn(await Rn(n, e, { kind: "markdown", content: r })) : [];
+async function G(n, e, t, r) {
+  const o = String(t ?? "").trim();
+  return o ? Mn(await Rn(n, e, { kind: "markdown", content: o, keyboard: r })) : [];
 }
 
-async function de(n, e, t) {
-  return Mn(await Rn(n, e, { kind: "image", absPath: t }));
-}
+async function de(n, e, t) { return Mn(await Rn(n, e, { kind: "image", absPath: t })); }
 
 function me(n) {
   if (!n || typeof n != "object") return "";
@@ -733,43 +575,28 @@ const H = new Set();
 function en(n, e, t, r) {
   const o = t.map(h).filter(Boolean);
   if (!o.length || !Number.isInteger(r) || r < 1 || r > 600) return;
-  const i = {
-    scope: e.scope,
-    group_openid: e.group_openid,
-    user_openid: e.user_openid
-  }, s = setTimeout(() => {
+  const i = { scope: e.scope, group_openid: e.group_openid, user_openid: e.user_openid };
+  const s = setTimeout(() => {
     H.delete(s), (async () => {
-      for (const c of o)
-        try {
-          await ge(n, i, c);
-        } catch (a) {
-          n.logger?.warn?.("[GF_qa] 撤回失败:", a?.message || a);
-        }
+      for (const c of o) try { await ge(n, i, c); } catch (a) { n.logger?.warn?.("[GF_qa] 撤回失败:", a?.message || a); }
     })();
   }, r * 1e3);
   H.add(s);
 }
 
-function he() {
-  for (const n of H) clearTimeout(n);
-  H.clear();
-}
+function he() { for (const n of H) clearTimeout(n); H.clear(); }
 
 async function we(n, e, t, r) {
   let o = "";
   const i = [];
   for (const a of t) {
-    if (a.kind === "text") {
-      o += a.text;
-      continue;
-    }
+    if (a.kind === "text") { o += a.text; continue; }
     const u = await En(n, a.file);
     u ? o += `\n${$n(u, 240)}\n` : i.push(a.file);
   }
   const s = [String(r || "").trim(), o.trim()].filter(Boolean).join(`\n\n`), c = [];
   s && c.push(...await G(n, e, s));
-  for (const a of i)
-    c.push(...await de(n, e, Sn(n, a)));
+  for (const a of i) c.push(...await de(n, e, Sn(n, a)));
   return c;
 }
 
@@ -779,14 +606,10 @@ async function _e(n, e, t) {
   const r = String(t ?? "").trim();
   if (!r) return [];
   const o = [];
-  if (r.length <= T)
-    return o.push(...await G(n, e, r)), o;
+  if (r.length <= T) return o.push(...await G(n, e, r)), o;
   let i = r;
   for (; i.length; ) {
-    if (i.length <= T) {
-      o.push(...await G(n, e, i));
-      break;
-    }
+    if (i.length <= T) { o.push(...await G(n, e, i)); break; }
     let s = i.lastIndexOf(`\n`, T);
     s < T / 2 && (s = T), o.push(...await G(n, e, i.slice(0, s))), i = i.slice(s).replace(/^\n+/, "");
   }
@@ -808,14 +631,7 @@ function ye(n) {
 }
 
 function be(n) {
-  const e = {
-    "image/png": "png",
-    "image/gif": "gif",
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/webp": "webp",
-    "image/bmp": "bmp"
-  };
+  const e = { "image/png": "png", "image/gif": "gif", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp", "image/bmp": "bmp" };
   if (e[n.content_type]) return e[n.content_type];
   const t = n.filename.match(/\.(jpe?g|png|gif|webp|bmp)$/i) || n.url.match(/\.(jpe?g|png|gif|webp|bmp)(?:$|\?)/i);
   return t ? t[1].toLowerCase().replace("jpeg", "jpg") : "png";
@@ -829,8 +645,7 @@ async function Se(n, e) {
   const o = [];
   for (const i of t) {
     const s = await fetch(i.url);
-    if (!s.ok)
-      throw new Error(`第 ${o.length + 1} 张图片下载失败 HTTP ${s.status}`);
+    if (!s.ok) throw new Error(`第 ${o.length + 1} 张图片下载失败 HTTP ${s.status}`);
     const c = Buffer.from(await s.arrayBuffer());
     if (!c.length) throw new Error(`第 ${o.length + 1} 张图片为空`);
     const a = be(i), u = `${Date.now()}_${Math.floor(Math.random() * 9e4 + 1e4)}.${a}`;
@@ -846,11 +661,7 @@ function parseStoredEntry(raw) {
   let at = undefined;
   let content = String(raw);
   const atIdx = content.lastIndexOf('\u0001at=');
-  if (atIdx >= 0) {
-    const flag = content.slice(atIdx + 4);
-    at = flag === '1';
-    content = content.slice(0, atIdx);
-  }
+  if (atIdx >= 0) { const flag = content.slice(atIdx + 4); at = flag === '1'; content = content.slice(0, atIdx); }
   const parts = content.split('\u0000');
   const answer = parts[0] || '';
   const delay = parseInt(parts[1] || '0', 10) || 0;
@@ -859,43 +670,19 @@ function parseStoredEntry(raw) {
 
 function $e(n, e) {
   if (!e) return null;
-  if (n.精准[e]) {
-    const p = parseStoredEntry(n.精准[e]);
-    return { type: "精准", answer: p.answer, delay: 0, at: p.at };
-  }
-  for (const t of Object.keys(n.模糊))
-    if (t && e.includes(t)) {
-      const p = parseStoredEntry(n.模糊[t]);
-      return { type: "模糊", answer: p.answer, delay: 0, at: p.at };
-    }
-  if (n.延时精准[e]) {
-    const p = parseStoredEntry(n.延时精准[e]);
-    return { type: "延时精准", answer: p.answer, delay: p.delay * 1000, at: p.at };
-  }
-  for (const t of Object.keys(n.延时模糊))
-    if (t && e.includes(t)) {
-      const p = parseStoredEntry(n.延时模糊[t]);
-      return { type: "延时模糊", answer: p.answer, delay: p.delay * 1000, at: p.at };
-    }
-  if (n.延时毫秒精准[e]) {
-    const p = parseStoredEntry(n.延时毫秒精准[e]);
-    return { type: "延时毫秒精准", answer: p.answer, delay: p.delay, at: p.at };
-  }
-  for (const t of Object.keys(n.延时毫秒模糊))
-    if (t && e.includes(t)) {
-      const p = parseStoredEntry(n.延时毫秒模糊[t]);
-      return { type: "延时毫秒模糊", answer: p.answer, delay: p.delay, at: p.at };
-    }
+  if (n.精准[e]) { const p = parseStoredEntry(n.精准[e]); return { type: "精准", answer: p.answer, delay: 0, at: p.at }; }
+  for (const t of Object.keys(n.模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.模糊[t]); return { type: "模糊", answer: p.answer, delay: 0, at: p.at }; }
+  if (n.延时精准[e]) { const p = parseStoredEntry(n.延时精准[e]); return { type: "延时精准", answer: p.answer, delay: p.delay * 1000, at: p.at }; }
+  for (const t of Object.keys(n.延时模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.延时模糊[t]); return { type: "延时模糊", answer: p.answer, delay: p.delay * 1000, at: p.at }; }
+  if (n.延时毫秒精准[e]) { const p = parseStoredEntry(n.延时毫秒精准[e]); return { type: "延时毫秒精准", answer: p.answer, delay: p.delay, at: p.at }; }
+  for (const t of Object.keys(n.延时毫秒模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.延时毫秒模糊[t]); return { type: "延时毫秒模糊", answer: p.answer, delay: p.delay, at: p.at }; }
   return null;
 }
 
 function Ee(n, e, t) {
   if (!e) return null;
   const r = ["全局", t];
-  for (const o of r) {
-    const i = $e(q(n, o), e);
-    if (i != null) return { ...i, scope: o };
-  }
+  for (const o of r) { const i = $e(q(n, o), e); if (i != null) return { ...i, scope: o }; }
   return null;
 }
 
@@ -904,8 +691,7 @@ const Ae = 3;
 function Re(n) {
   const e = v(n);
   let t = 0, r = "";
-  for (const s of e)
-    s.kind === "img" ? t += 1 : r += s.text;
+  for (const s of e) s.kind === "img" ? t += 1 : r += s.text;
   const o = r.replace(/\r\n/g, `\n`), i = o.length ? Math.ceil(o.split(`\n`).length / 4) : 0;
   return Math.max(1, i + t);
 }
@@ -914,8 +700,7 @@ function Me(n, e) {
   if (!n.length) return [];
   const t = Math.max(1, e), r = [];
   let o = [], i = 0;
-  for (const s of n)
-    o.length > 0 && i + s.cost > t && (r.push(o), o = [], i = 0), o.push(s), i += s.cost;
+  for (const s of n) o.length > 0 && i + s.cost > t && (r.push(o), o = [], i = 0), o.push(s), i += s.cost;
   return o.length && r.push(o), r;
 }
 
@@ -924,9 +709,93 @@ function kn(n, e) {
   return `<qqbot-cmd-input text="${o}" show="${i}" reference="false"/>`;
 }
 
-function l(n, e) {
-  return `- ${kn(n, e)}`;
+// ============ ⌨️ 键盘按钮（非蓝字，点击把指令填入聊天输入框） ============
+// type=2 为「指令按钮」：点击后把 action.data 的内容填进输入框。
+// enter=false → 只填入、不自动发送；改成 true 则点一下就直接发出。
+function kbBtn(id, label, data, style = 1) {
+  const t = String(label ?? "").slice(0, 20) || "按钮";
+  return {
+    id: String(id),
+    render_data: { label: t, visited_label: t, style },
+    action: {
+      type: 2,
+      permission: { type: 2 },
+      data: String(data ?? "").slice(0, 100),
+      enter: false,
+      unsupport_tips: "当前客户端不支持此操作"
+    }
+  };
 }
+
+function buildKeyboard(rows) {
+  const r = (Array.isArray(rows) ? rows : []).filter((x) => Array.isArray(x) && x.length).slice(0, 5);
+  if (!r.length) return void 0;
+  return { rows: r.map((row) => ({ buttons: row.slice(0, 5) })) };
+}
+
+// 主菜单底部的「常用功能」按钮
+const MAIN_KEYBOARD = buildKeyboard([[
+  kbBtn("qa_btn_menu", "问答菜单", "问答菜单"),
+  kbBtn("qa_btn_list", "问答词列表", "问答词列表#1"),
+  kbBtn("qa_btn_me", "我的账号", "我的账号")
+]]);
+
+// 各板块菜单底部的键盘按钮（点击把指令填进聊天栏，不自动发送）
+const BACK_ROW = [kbBtn("qa_btn_back", "⬅️ 返回主菜单", "问答系统", 0)];
+
+const KB_MASTER = buildKeyboard([
+  [kbBtn("qa_m_add", "加主人", "加主人+OpenID"), kbBtn("qa_m_del", "删主人", "删主人+OpenID")],
+  [kbBtn("qa_m_list", "查看主人列表", "查看主人列表", 0), kbBtn("qa_m_clear", "清空主人", "清空主人", 0)],
+  BACK_ROW
+]);
+
+const KB_GROUP = buildKeyboard([
+  [kbBtn("qa_g_add_p", "添加精准", "添加精准问答#问题#答案"), kbBtn("qa_g_add_f", "添加模糊", "添加模糊问答#问题#答案")],
+  [kbBtn("qa_g_del_p", "删除精准", "删除精准问答#问题", 0), kbBtn("qa_g_del_f", "删除模糊", "删除模糊问答#问题", 0)],
+  [kbBtn("qa_g_list", "问答词列表", "问答词列表#1", 0), kbBtn("qa_g_clr_p", "清空精准", "清空精准问答", 0), kbBtn("qa_g_clr_f", "清空模糊", "清空模糊问答", 0)],
+  [kbBtn("qa_g_time", "撤回时间", "设置本群答案撤回时间#115", 0)],
+  BACK_ROW
+]);
+
+const KB_GLOBAL = buildKeyboard([
+  [kbBtn("qa_w_add_p", "添加精准", "添加全局精准问答#问题#答案"), kbBtn("qa_w_add_f", "添加模糊", "添加全局模糊问答#问题#答案")],
+  [kbBtn("qa_w_del_p", "删除精准", "删除全局精准问答#问题", 0), kbBtn("qa_w_del_f", "删除模糊", "删除全局模糊问答#问题", 0)],
+  [kbBtn("qa_w_list", "问答词列表", "问答词列表#1", 0), kbBtn("qa_w_clr_p", "清空精准", "清空全局精准问答", 0), kbBtn("qa_w_clr_f", "清空模糊", "清空全局模糊问答", 0)],
+  [kbBtn("qa_w_time", "撤回时间", "设置全局答案撤回时间#115", 0)],
+  BACK_ROW
+]);
+
+const KB_PRIVATE = buildKeyboard([
+  [kbBtn("qa_p_add_p", "添加精准", "添加私聊精准问答#问题#答案"), kbBtn("qa_p_add_f", "添加模糊", "添加私聊模糊问答#问题#答案")],
+  [kbBtn("qa_p_del_p", "删除精准", "删除私聊精准问答#问题", 0), kbBtn("qa_p_del_f", "删除模糊", "删除私聊模糊问答#问题", 0)],
+  [kbBtn("qa_p_list", "问答词列表", "问答词列表#1", 0), kbBtn("qa_p_clr_p", "清空精准", "清空私聊精准问答", 0), kbBtn("qa_p_clr_f", "清空模糊", "清空私聊模糊问答", 0)],
+  [kbBtn("qa_p_time", "撤回时间", "设置私聊答案撤回时间#115", 0)],
+  BACK_ROW
+]);
+
+const KB_DELAY = buildKeyboard([
+  [kbBtn("qa_d_add_p", "延时精准", "添加延时精准问答#问题#答案#60"), kbBtn("qa_d_add_f", "延时模糊", "添加延时模糊问答#问题#答案#60")],
+  [kbBtn("qa_d_addm_p", "毫秒精准", "添加延时毫秒精准问答#问题#答案#5000"), kbBtn("qa_d_addm_f", "毫秒模糊", "添加延时毫秒模糊问答#问题#答案#5000")],
+  [kbBtn("qa_d_del_p", "删延时精准", "删除延时精准问答#问题", 0), kbBtn("qa_d_del_f", "删延时模糊", "删除延时模糊问答#问题", 0), kbBtn("qa_d_delm_p", "删毫秒精准", "删除延时毫秒精准问答#问题", 0), kbBtn("qa_d_delm_f", "删毫秒模糊", "删除延时毫秒模糊问答#问题", 0)],
+  [kbBtn("qa_d_clr", "清空延时精准", "清空延时精准问答", 0), kbBtn("qa_d_clrm", "清空延时模糊", "清空延时模糊问答", 0), kbBtn("qa_d_clrm_p", "清空毫秒精准", "清空延时毫秒精准问答", 0), kbBtn("qa_d_clrm_f", "清空毫秒模糊", "清空延时毫秒模糊问答", 0)],
+  BACK_ROW
+]);
+
+const KB_CLEAR = buildKeyboard([
+  [kbBtn("qa_c_p", "清空全部精准", "清空全部精准问答", 0), kbBtn("qa_c_f", "清空全部模糊", "清空全部模糊问答", 0)],
+  BACK_ROW
+]);
+
+function kbReply(n, scope) {
+  const rows = [];
+  if (n.owner) rows.push([kbBtn("qa_r_g", "切换全局回复模式", "切换全局回复模式")]);
+  if (scope === "group") rows.push([kbBtn("qa_r_b", "切换本群回复模式", "切换本群回复模式")]);
+  if (n.owner) rows.push([kbBtn("qa_r_p", "切换私聊回复模式", "切换私聊回复模式", 0)]);
+  rows.push(BACK_ROW);
+  return buildKeyboard(rows);
+}
+
+function l(n, e) { return `- ${kn(n, e)}`; }
 
 function ke(n) {
   const e = j(n);
@@ -939,16 +808,13 @@ function tn(n, e) {
   return content ? `${content}\n${t}`.trim() : t;
 }
 
-async function _(n, e, t, r) {
+async function _(n, e, t, r, o) {
   const cost = Date.now() - (t._startTime || Date.now());
   const finalText = `${r}\n> 响应用时: ${cost}ms`;
-  return G(n, e, tn(t, finalText));
+  return G(n, e, tn(t, finalText), o);
 }
 
-async function je(n, e, t, r, o) {
-  const i = await _(n, e, t, r);
-  return en(n, e, i, Z(n, o)), i;
-}
+async function je(n, e, t, r, o) { const i = await _(n, e, t, r); return en(n, e, i, Z(n, o)), i; }
 
 async function Pe(n, e, t, r, o) {
   const cost = Date.now() - (t._startTime || Date.now());
@@ -957,13 +823,9 @@ async function Pe(n, e, t, r, o) {
   return en(n, e, i, Z(n, o)), i;
 }
 
-function jn(n, e) {
-  return e.scope === "group" ? S(n) || "unknown" : "私聊";
-}
+function jn(n, e) { return e.scope === "group" ? S(n) || "unknown" : "私聊"; }
 
-function X(n) {
-  return l(`设置${n}答案撤回时间#115`, `设置${n}答案撤回时间#120`);
-}
+function X(n) { return l(`设置${n}答案撤回时间#115`, `设置${n}答案撤回时间#120`); }
 
 function un(n, e, t) {
   if (P(n, e)) return true;
@@ -971,11 +833,9 @@ function un(n, e, t) {
   return false;
 }
 
-function O(n, e) {
-  n.length && n.push("***"), n.push(...e);
-}
+function O(n, e) { n.length && n.push("***"), n.push(...e); }
 
-// 普通用户专属菜单：仅展示引导信息，无任何管理按钮
+// ============ 普通用户专属菜单 ============
 function CeUser() {
   const e = [];
   O(e, [
@@ -994,116 +854,258 @@ function CeUser() {
     "",
     "如需新增、修改或删除问答，请联系群主或管理员。"
   ]);
+  O(e, [
+    "",
+    "**🔑 我的账号**",
+    l("我的账号", "点击获取你的 OpenID")
+  ]);
   return e.join(`\n`);
 }
 
-// 管理菜单：仅主人/管理员可见
-function Ce(n) {
+// ============ 主菜单 ============
+function CeMain(n) {
+  const e = [];
+  const identity = n.fixedOwner ? "👑 固定操作者" : (n.owner ? "👑 主人" : "🛡️ 群管理员");
+
+  O(e, [
+    "**📋 问答系统 · 主菜单**",
+    "",
+    `👤 当前身份：**${identity}**`,
+    "",
+    "**📌 板块导航**"
+  ]);
+
+  if (n.fixedOwner) O(e, [l("问答系统-主人", "👑 主人管理")]);
+  if (n.owner || (n.group && n.manageGroup)) O(e, [l("问答系统-回复", "🎭 回复模式")]);
+  if (n.group && n.manageGroup) O(e, [l("问答系统-本群", "📚 本群问答")]);
+  if (n.owner) {
+    O(e, [l("问答系统-全局", "🌍 全局问答")]);
+    O(e, [l("问答系统-私聊", "💬 私聊问答")]);
+  }
+  if (n.group && n.manageGroup) O(e, [l("问答系统-延时", "⏱️ 延时问答")]);
+  if (n.owner) O(e, [l("问答系统-清空", "🗑️ 清空操作")]);
+
+  O(e, [
+    "",
+    "**🔍 快速查看**",
+    l("问答词列表#1", "查看问答词列表")
+  ]);
+
+  O(e, [
+    "",
+    "**🔑 我的账号**",
+    l("我的账号", "点击获取你的 OpenID")
+  ]);
+
+  O(e, [
+    "",
+    "💡 点击上方蓝字可直接填充对应指令",
+    "💡 指令前面可加 `/`，例如 `/问答系统`、`/添加精准问答#你好#你好呀`",
+    "⌨️ 底部【常用功能】按钮：点一下会把指令自动填进聊天栏"
+  ]);
+
+  return e.join(`\n`);
+}
+
+// ============ 👑 主人管理 ============
+function CeMaster(n) {
+  const e = [];
+  const masters = getMasters(n);
+  O(e, [
+    "**👑 主人管理**",
+    "",
+    `固定操作者：\`${Tn(n)}\``,
+    `其他主人：${masters.length} 位`,
+    "",
+    "**📌 添加主人**",
+    l("加主人+OpenID", "加主人+OpenID"),
+    "可省略 `+`：`加主人 OpenID` / `加主人OpenID`",
+    "",
+    "**📌 删除主人**",
+    l("删主人+OpenID", "删主人+OpenID"),
+    "可省略 `+`：`删主人 OpenID` / `删主人OpenID`",
+    "",
+    "**📌 其他操作**",
+    l("查看主人列表", "查看主人列表"),
+    l("清空主人", "清空主人（保留固定操作者）"),
+    "",
+    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
+  ]);
+  return e.join(`\n`);
+}
+
+// ============ 🎭 回复模式 ============
+function CeReply(n) {
   const e = [];
   const globalMode = n.atReplyGlobal ? "带艾特" : "纯文本";
   const groupMode = n.atReplyGroup ? "带艾特" : "纯文本";
   const privateMode = n.atReplyPrivate ? "带艾特" : "纯文本";
 
+  O(e, ["**🎭 回复模式**", ""]);
+
+  if (n.owner) O(e, [`🌍 全局：**${globalMode}**`, l("切换全局回复模式", "切换全局回复模式")]);
+  if (n.group && n.manageGroup) O(e, ["", `📚 本群：**${groupMode}**`, l("切换本群回复模式", "切换本群回复模式")]);
+  if (n.owner) O(e, ["", `💬 私聊：**${privateMode}**`, l("切换私聊回复模式", "切换私聊回复模式")]);
+
+  O(e, ["", "**💡 优先级**", "单条答案后缀 > 范围模式 > 全局模式", "", "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"]);
+  return e.join(`\n`);
+}
+
+// ============ 📚 本群问答 ============
+function CeGroup(n, t) {
+  const e = [];
+  const groupId = t && t.group_openid ? t.group_openid : "unknown";
+  const rt = Z(n, groupId);
   O(e, [
-    "**获取列表**",
-    l("问答词列表#1", "问答词列表")
+    "**📚 本群问答**",
+    "",
+    `当前撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`,
+    "",
+    "**📌 添加**",
+    l("添加精准问答#问题#答案", "添加精准问答#问题#答案"),
+    l("添加模糊问答#问题#答案", "添加模糊问答#问题#答案"),
+    "",
+    "**📌 删除**",
+    l("删除精准问答#问题", "删除精准问答#问题"),
+    l("删除模糊问答#问题", "删除模糊问答#问题"),
+    "",
+    "**📌 清空**",
+    l("清空精准问答", "清空精准问答"),
+    l("清空模糊问答", "清空模糊问答"),
+    "",
+    "**📌 设置**",
+    l("设置本群答案撤回时间#115", "设置本群答案撤回时间#120"),
+    "",
+    "**💡 单条答案艾特控制**",
+    "末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特",
+    "",
+    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
   ]);
+  return e.join(`\n`);
+}
 
-  if (n.owner) {
-    O(e, [
-      "**全局回复模式**",
-      `当前：**${globalMode}**`,
-      l("切换全局回复模式", "点击切换全局回复模式")
-    ]);
-  }
-
-  if (n.group && (n.manageGroup || n.owner)) {
-    O(e, [
-      "**本群回复模式**",
-      `当前：**${groupMode}**`,
-      l("切换本群回复模式", "点击切换本群回复模式")
-    ]);
-  }
-
-  if (n.owner) {
-    O(e, [
-      "**私聊回复模式**",
-      `当前：**${privateMode}**`,
-      l("切换私聊回复模式", "点击切换私聊回复模式")
-    ]);
-  }
-
-  n.group && n.manageGroup && O(e, [
-    "**本群问答**",
-    l("添加精准问答#问题#答案"),
-    l("添加模糊问答#问题#答案"),
-    l("删除精准问答#问题"),
-    l("删除模糊问答#问题"),
-    l("清空精准问答"),
-    l("清空模糊问答"),
-    X("本群")
-  ]);
-
-  n.owner && (O(e, [
-    "**全局问答**",
-    l("添加全局精准问答#问题#答案"),
-    l("添加全局模糊问答#问题#答案"),
-    l("删除全局精准问答#问题"),
-    l("删除全局模糊问答#问题"),
-    l("清空全局精准问答"),
-    l("清空全局模糊问答"),
-    X("全局")
-  ]), O(e, [
-    "**私聊问答**",
-    l("添加私聊精准问答#问题#答案"),
-    l("添加私聊模糊问答#问题#答案"),
-    l("删除私聊精准问答#问题"),
-    l("删除私聊模糊问答#问题"),
-    l("清空私聊精准问答"),
-    l("清空私聊模糊问答"),
-    X("私聊")
-  ]));
-
+// ============ 🌍 全局问答 ============
+function CeGlobal(n) {
+  const e = [];
+  const rt = Z(n, "全局");
   O(e, [
-    "**延时秒问答（最长60秒）**",
-    l("添加延时精准问答#问题#答案#秒数"),
-    l("添加延时模糊问答#问题#答案#秒数"),
-    l("删除延时精准问答#问题"),
-    l("删除延时模糊问答#问题"),
-    l("清空延时精准问答"),
-    l("清空延时模糊问答")
+    "**🌍 全局问答**",
+    "",
+    `当前撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`,
+    "",
+    "**📌 添加**",
+    l("添加全局精准问答#问题#答案", "添加全局精准问答#问题#答案"),
+    l("添加全局模糊问答#问题#答案", "添加全局模糊问答#问题#答案"),
+    "",
+    "**📌 删除**",
+    l("删除全局精准问答#问题", "删除全局精准问答#问题"),
+    l("删除全局模糊问答#问题", "删除全局模糊问答#问题"),
+    "",
+    "**📌 清空**",
+    l("清空全局精准问答", "清空全局精准问答"),
+    l("清空全局模糊问答", "清空全局模糊问答"),
+    "",
+    "**📌 设置**",
+    l("设置全局答案撤回时间#115", "设置全局答案撤回时间#120"),
+    "",
+    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
   ]);
+  return e.join(`\n`);
+}
 
+// ============ 💬 私聊问答 ============
+function CePrivate(n) {
+  const e = [];
+  const rt = Z(n, "私聊");
   O(e, [
-    "**延时毫秒问答（最长60000毫秒）**",
-    l("添加延时毫秒精准问答#问题#答案#毫秒数"),
-    l("添加延时毫秒模糊问答#问题#答案#毫秒数"),
-    l("删除延时毫秒精准问答#问题"),
-    l("删除延时毫秒模糊问答#问题"),
-    l("清空延时毫秒精准问答"),
-    l("清空延时毫秒模糊问答")
+    "**💬 私聊问答**",
+    "",
+    `当前撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`,
+    "",
+    "**📌 添加**",
+    l("添加私聊精准问答#问题#答案", "添加私聊精准问答#问题#答案"),
+    l("添加私聊模糊问答#问题#答案", "添加私聊模糊问答#问题#答案"),
+    "",
+    "**📌 删除**",
+    l("删除私聊精准问答#问题", "删除私聊精准问答#问题"),
+    l("删除私聊模糊问答#问题", "删除私聊模糊问答#问题"),
+    "",
+    "**📌 清空**",
+    l("清空私聊精准问答", "清空私聊精准问答"),
+    l("清空私聊模糊问答", "清空私聊模糊问答"),
+    "",
+    "**📌 设置**",
+    l("设置私聊答案撤回时间#115", "设置私聊答案撤回时间#120"),
+    "",
+    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
   ]);
+  return e.join(`\n`);
+}
 
+// ============ ⏱️ 延时问答 ============
+function CeDelay(n) {
+  const e = [];
   O(e, [
-    "**全部**",
-    l("清空全部精准问答"),
-    l("清空全部模糊问答")
-  ]);
-
-  O(e, [
-    "**单个答案艾特控制**",
-    "末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特，不加则用本群默认",
-    "例：`添加精准问答#问题#答案#N@`",
+    "**⏱️ 延时问答**",
+    "",
+    "**📌 延时秒（最长 60 秒）**",
+    l("添加延时精准问答#问题#答案#60", "添加延时精准问答#问题#答案#秒数"),
+    l("添加延时模糊问答#问题#答案#60", "添加延时模糊问答#问题#答案#秒数"),
+    l("删除延时精准问答#问题", "删除延时精准问答#问题"),
+    l("删除延时模糊问答#问题", "删除延时模糊问答#问题"),
+    l("清空延时精准问答", "清空延时精准问答"),
+    l("清空延时模糊问答", "清空延时模糊问答"),
+    "",
+    "**📌 延时毫秒（最长 60000 毫秒）**",
+    l("添加延时毫秒精准问答#问题#答案#5000", "添加延时毫秒精准问答#问题#答案#毫秒数"),
+    l("添加延时毫秒模糊问答#问题#答案#5000", "添加延时毫秒模糊问答#问题#答案#毫秒数"),
+    l("删除延时毫秒精准问答#问题", "删除延时毫秒精准问答#问题"),
+    l("删除延时毫秒模糊问答#问题", "删除延时毫秒模糊问答#问题"),
+    l("清空延时毫秒精准问答", "清空延时毫秒精准问答"),
+    l("清空延时毫秒模糊问答", "清空延时毫秒模糊问答"),
+    "",
+    "**💡 单条答案艾特控制**",
+    "末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特",
     "例：`添加延时精准问答#问题#答案#60#N@`",
-    "例：`添加延时毫秒精准问答#问题#答案#5000#Y@`"
+    "",
+    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
   ]);
+  return e.join(`\n`);
+}
 
+// ============ 🗑️ 清空操作 ============
+function CeClear(n) {
+  const e = [];
+  O(e, [
+    "**🗑️ 清空操作（全局）**",
+    "",
+    "⚠️ **警告：以下操作不可撤销，请谨慎使用**",
+    "",
+    l("清空全部精准问答", "清空全部精准问答"),
+    l("清空全部模糊问答", "清空全部模糊问答"),
+    "",
+    "说明：",
+    "- 会同时清空全局、私聊、所有群目录的对应库",
+    "- 仅最高主人可执行",
+    "",
+    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
+  ]);
   return e.join(`\n`);
 }
 
 const Te = /^(添加|删除|清空)(?!.*延时毫秒)(?!.*延时)(精准|模糊)问答(?:#([^\r\n#]+)(?:#([\s\S]*))?)?$/, Oe = /^(添加|删除|清空)(?!.*延时毫秒)(?!.*延时)(全局|私聊)(精准|模糊)问答(?:#([^\r\n#]+)(?:#([\s\S]*))?)?$/, Ge = /^清空全部(精准|模糊)问答$/, Ie = /^(问答词列表|详细问答词列表)(?:#([^\r\n#]*))?$/, Ue = /^设置(本群|私聊|全局)答案撤回时间(?:#([^\r\n#]*))?$/, Le = /^添加(?:全局|私聊)?(?:精准|模糊)问答#[^\r\n#]*#/, De = /^添加(?:全局|私聊)?(?:精准|模糊)问答#[^\r\n#]+/;
 const Ee2 = /^(添加|删除|清空)延时(精准|模糊)问答(?:#([^\r\n#]+)(?:#([\s\S]*))?)?$/;
 const EeMs = /^(添加|删除|清空)延时毫秒(精准|模糊)问答(?:#([^\r\n#]+)(?:#([\s\S]*))?)?$/;
+
+const CMD_SUB = /^问答系统[-\s_]?(主人|回复|本群|全局|私聊|延时|清空)(管理)?$/;
+const CMD_MAIN = /^问答系统$/;
+
+const CMD_ADD_MASTER = /^加主人[\s+#：:]*(\S+)$/;
+const CMD_DEL_MASTER = /^删主人[\s+#：:]*(\S+)$/;
+const CMD_ADD_MASTER_EMPTY = /^加主人[\s+#：:]*$/;
+const CMD_DEL_MASTER_EMPTY = /^删主人[\s+#：:]*$/;
+const CMD_LIST_MASTER = /^查看主人列表$/;
+const CMD_CLEAR_MASTER = /^清空主人$/;
 
 function parseAtSuffix(str) {
   if (str.endsWith("#N@")) return { content: str.slice(0, -3), at: false };
@@ -1152,27 +1154,22 @@ function qe(n, e, t) {
 
 function Ne(n) {
   const e = [];
-  for (const t of n)
-    t.entries.forEach(([r, o], i) => {
-      e.push({
-        title: t.title,
-        total: t.total,
-        index: i + 1,
-        question: r,
-        answer: o,
-        deleteFill: t.deleteFill(r),
-        cost: Re(o)
-      });
-    });
+  for (const t of n) t.entries.forEach(([r, o], i) => {
+    e.push({ title: t.title, total: t.total, index: i + 1, question: r, answer: o, deleteFill: t.deleteFill(r), cost: Re(o) });
+  });
   return e;
 }
 
+// 修复：新增「测试问答」按钮（点击后填入 @机器人 + 问题文本）
 async function ze(n, e, t, r) {
   if (!r.length) return "";
+  const botId = getBotOpenId(n);
+  const atPrefix = botId ? `<@!${botId}> ` : "";
   let o = `### ${e}（${t}）\n\n`;
   for (const i of r) {
     const s = await An(n, i.answer, 96);
-    o += `${i.index}. ${kn(i.deleteFill, i.question)}\n${s || Hn(i.answer)}\n\n`;
+    const testBtn = kn(`${atPrefix}${i.question}`, "测试问答");
+    o += `${i.index}. ${kn(i.deleteFill, i.question)}\n${s || Hn(i.answer)}\n- ${testBtn}\n\n`;
   }
   return o;
 }
@@ -1182,9 +1179,7 @@ function He(n, e, t) {
   return e > 1 && r.push(l(`${n}#${e - 1}`, "上一页")), e < t && r.push(l(`${n}#${e + 1}`, "下一页")), r.join(`\n`);
 }
 
-function F(n) {
-  return n === "全局" || n === "私聊" ? n : "本群";
-}
+function F(n) { return n === "全局" || n === "私聊" ? n : "本群"; }
 
 async function Je(n, e, t, r) {
   const o = yn(e);
@@ -1194,49 +1189,28 @@ async function Je(n, e, t, r) {
     i ? c = o.slice(i[0].length) : c = "", c = c.trim();
   }
   let a = [];
-  try {
-    a = await Se(n, e);
-  } catch (f) {
-    return { ok: !1, error: f?.message || "图片下载失败，添加已取消" };
-  }
+  try { a = await Se(n, e); } catch (f) { return { ok: !1, error: f?.message || "图片下载失败，添加已取消" }; }
   let u = c;
-  for (const f of a)
-    u += `[img:${f}]`;
+  for (const f of a) u += `[img:${f}]`;
   return u.length ? t.trim() ? { ok: !0, content: u } : { ok: !1, error: "必填参数缺失！请带上问题。" } : { ok: !1, error: "答案不能为空～文字或图片至少要有一样哦" };
 }
 
 async function fn(n, e, t, r, o, i, s, c, delay = 0, atOverride = undefined) {
   const fileSuffix = delay > 0 ? `延时${o}` : o;
   if (r === "添加") {
-    let at = atOverride;
-    let answer = c;
-    if (at === undefined) {
-      const parsed = parseAtSuffix(answer);
-      answer = parsed.content;
-      at = parsed.at;
-    }
-
+    let at = atOverride, answer = c;
+    if (at === undefined) { const parsed = parseAtSuffix(answer); answer = parsed.content; at = parsed.at; }
     const a = await Je(n, e, s, answer);
-    if (a.ok === !1)
-      return await _(n, t, e, a.error), !0;
-    if (Bn(n, i, fileSuffix, s) != null)
-      return await _(n, t, e, `【${F(i)}${fileSuffix}问答】中已存在该词语啦～！如需修改请先删除哦～`), !0;
-
+    if (a.ok === !1) return await _(n, t, e, a.error), !0;
+    if (Bn(n, i, fileSuffix, s) != null) return await _(n, t, e, `【${F(i)}${fileSuffix}问答】中已存在该词语啦～！如需修改请先删除哦～`), !0;
     let finalContent = a.content;
     if (delay > 0) finalContent = `${finalContent}\u0000${delay}`;
     if (at !== undefined) finalContent = `${finalContent}\u0001at=${at ? 1 : 0}`;
-
     qn(n, i, fileSuffix, s, finalContent);
     const f = F(i), p = await An(n, a.content, 96);
     const delayText = delay > 0 ? `\n**延迟：** ${delay}秒` : "";
     const atText = at === undefined ? "\n**回复模式：** 使用本群默认" : `\n**回复模式：** ${at ? "艾特" : "纯文本"}`;
-    return await je(
-      n,
-      t,
-      e,
-      `已新增【${f}${fileSuffix}问答】\n\n**问：** ${s}\n\n**答：** ${p}${delayText}${atText}`,
-      jn(e, t)
-    ), !0;
+    return await je(n, t, e, `已新增【${f}${fileSuffix}问答】\n\n**问：** ${s}\n\n**答：** ${p}${delayText}${atText}`, jn(e, t)), !0;
   }
   return r === "删除" ? s ? Nn(n, i, fileSuffix, s) ? (await _(n, t, e, `好哒！已删除【${F(i)}${fileSuffix}问答】的「${s}」`), !0) : (await _(n, t, e, "好像木有这个哎～要不你仔细看看列表？"), !0) : (await _(n, t, e, "必填参数缺失！请带上要删除的问题。"), !0) : r === "清空" ? (N(n, i, fileSuffix), await _(n, t, e, `这就把【${F(i)}${fileSuffix}问答】的词语通通清空！`), !0) : !1;
 }
@@ -1244,46 +1218,28 @@ async function fn(n, e, t, r, o, i, s, c, delay = 0, atOverride = undefined) {
 async function fnMs(n, e, t, r, o, i, s, c, delayMs = 0, atOverride = undefined) {
   const fileSuffix = delayMs > 0 ? `延时毫秒${o}` : o;
   if (r === "添加") {
-    let at = atOverride;
-    let answer = c;
-    if (at === undefined) {
-      const parsed = parseAtSuffix(answer);
-      answer = parsed.content;
-      at = parsed.at;
-    }
-
+    let at = atOverride, answer = c;
+    if (at === undefined) { const parsed = parseAtSuffix(answer); answer = parsed.content; at = parsed.at; }
     const a = await Je(n, e, s, answer);
-    if (a.ok === !1)
-      return await _(n, t, e, a.error), !0;
-    if (Bn(n, i, fileSuffix, s) != null)
-      return await _(n, t, e, `【${F(i)}${fileSuffix}问答】中已存在该词语啦～！如需修改请先删除哦～`), !0;
-
+    if (a.ok === !1) return await _(n, t, e, a.error), !0;
+    if (Bn(n, i, fileSuffix, s) != null) return await _(n, t, e, `【${F(i)}${fileSuffix}问答】中已存在该词语啦～！如需修改请先删除哦～`), !0;
     let finalContent = a.content;
     if (delayMs > 0) finalContent = `${finalContent}\u0000${delayMs}`;
     if (at !== undefined) finalContent = `${finalContent}\u0001at=${at ? 1 : 0}`;
-
     qn(n, i, fileSuffix, s, finalContent);
     const f = F(i), p = await An(n, a.content, 96);
     const delayText = delayMs > 0 ? `\n**延迟：** ${delayMs}毫秒` : "";
     const atText = at === undefined ? "\n**回复模式：** 使用本群默认" : `\n**回复模式：** ${at ? "艾特" : "纯文本"}`;
-    return await je(
-      n,
-      t,
-      e,
-      `已新增【${f}${fileSuffix}问答】\n\n**问：** ${s}\n\n**答：** ${p}${delayText}${atText}`,
-      jn(e, t)
-    ), !0;
+    return await je(n, t, e, `已新增【${f}${fileSuffix}问答】\n\n**问：** ${s}\n\n**答：** ${p}${delayText}${atText}`, jn(e, t)), !0;
   }
   return r === "删除" ? s ? Nn(n, i, fileSuffix, s) ? (await _(n, t, e, `好哒！已删除【${F(i)}${fileSuffix}问答】的「${s}」`), !0) : (await _(n, t, e, "好像木有这个哎～要不你仔细看看列表？"), !0) : (await _(n, t, e, "必填参数缺失！请带上要删除的问题。"), !0) : r === "清空" ? (N(n, i, fileSuffix), await _(n, t, e, `这就把【${F(i)}${fileSuffix}问答】的词语通通清空！`), !0) : !1;
 }
 
 async function Qe(n, e, t, r, o) {
   const i = P(n, e), s = t.scope === "group", c = qe(n, e, t);
-  if (!c.length)
-    return !i && !s ? "" : i ? "好像木有过数据哎～" : "好像木有过数据哎～本群还没有问答。";
+  if (!c.length) return !i && !s ? "" : i ? "好像木有过数据哎～" : "好像木有过数据哎～本群还没有问答。";
   const a = Ne(c), u = c.length * Ae, f = Me(a, u), p = f.length;
-  if (!p)
-    return i ? "好像木有过数据哎～" : "好像木有过数据哎～本群还没有问答。";
+  if (!p) return i ? "好像木有过数据哎～" : "好像木有过数据哎～本群还没有问答。";
   if (r > p) return `没有这一页（共 ${p} 页）`;
   const y = f[r - 1] || [], g = [];
   for (const m of y) {
@@ -1291,28 +1247,79 @@ async function Qe(n, e, t, r, o) {
     b && b.title === m.title ? b.items.push(m) : g.push({ title: m.title, total: m.total, items: [m] });
   }
   const $ = [];
-  for (const m of g)
-    $.push(await ze(n, m.title, m.total, m.items));
+  for (const m of g) $.push(await ze(n, m.title, m.total, m.items));
   const M = $.filter(Boolean).join(`\n***\n`), C = He(o, r, p);
   return C ? `${M}\n***\n${C}` : M;
 }
 
 async function We(n, e, t) {
-  const r = yn(e);
+  const r = stripSlash(yn(e));
   if (!r) return !1;
+
+  // ============ 主人管理指令 ============
+  if (CMD_ADD_MASTER_EMPTY.test(r)) {
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能添加主人！"); return true; }
+    await _(n, t, e, "格式：`加主人+OpenID`（加号 / 空格 / # 可省略）\n例如：`加主人 6E0B188704AC0611617425B687DB9034`");
+    return true;
+  }
+
+  if (CMD_DEL_MASTER_EMPTY.test(r)) {
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能删除主人！"); return true; }
+    await _(n, t, e, "格式：`删主人+OpenID`（加号 / 空格 / # 可省略）\n例如：`删主人 6E0B188704AC0611617425B687DB9034`");
+    return true;
+  }
+
+  if (CMD_ADD_MASTER.test(r)) {
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能添加主人！"); return true; }
+    const m = r.match(CMD_ADD_MASTER);
+    const newOpenid = (m[1] || "").trim();
+    if (newOpenid.length < 8) { await _(n, t, e, "OpenID 长度异常，请重新检查后重试。"); return true; }
+    if (newOpenid === Tn(n)) { await _(n, t, e, "该 OpenID 已经是固定操作者本人，无需重复添加。"); return true; }
+    const masters = getMasters(n);
+    if (masters.includes(newOpenid)) { await _(n, t, e, "该 OpenID 已在主人列表中。"); return true; }
+    const ok = saveConfig(n, (config) => { if (!Array.isArray(config.masters)) config.masters = []; config.masters.push(newOpenid); });
+    if (!ok) { await _(n, t, e, "保存配置失败，请检查配置文件是否可写。"); return true; }
+    await _(n, t, e, `✅ 已添加主人：\`${newOpenid}\``);
+    return true;
+  }
+
+  if (CMD_DEL_MASTER.test(r)) {
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能删除主人！"); return true; }
+    const m = r.match(CMD_DEL_MASTER);
+    const target = (m[1] || "").trim();
+    const masters = getMasters(n);
+    if (!masters.includes(target)) { await _(n, t, e, "该 OpenID 不在主人列表中。"); return true; }
+    const ok = saveConfig(n, (config) => { config.masters = (config.masters || []).filter((x) => x !== target); });
+    if (!ok) { await _(n, t, e, "保存配置失败，请检查配置文件是否可写。"); return true; }
+    await _(n, t, e, `✅ 已移除主人：\`${target}\``);
+    return true;
+  }
+
+  if (CMD_LIST_MASTER.test(r)) {
+    if (!isOwnerOnly(n, e)) return true;
+    const masters = getMasters(n);
+    if (!masters.length) { await _(n, t, e, `**主人列表**\n\n固定操作者：\`${Tn(n)}\`\n\n其他主人：（暂无）`); return true; }
+    const list = masters.map((m, i) => `${i + 1}. \`${m}\``).join(`\n`);
+    await _(n, t, e, `**主人列表**\n\n固定操作者：\`${Tn(n)}\`\n\n其他主人（${masters.length} 位）：\n${list}`);
+    return true;
+  }
+
+  if (CMD_CLEAR_MASTER.test(r)) {
+    if (!isOwnerOnly(n, e)) return true;
+    const masters = getMasters(n);
+    if (!masters.length) { await _(n, t, e, "主人列表已经为空。"); return true; }
+    const ok = saveConfig(n, (config) => { config.masters = []; });
+    if (!ok) { await _(n, t, e, "保存配置失败，请检查配置文件是否可写。"); return true; }
+    await _(n, t, e, "✅ 已清空所有主人（固定操作者保留）。");
+    return true;
+  }
+  // ========================================================
 
   if (r === "我的账号") {
     const openid = j(e);
-    if (!openid) {
-      await G(n, t, "无法获取你的 OpenID，请稍后再试。");
-      return true;
-    }
+    if (!openid) { await G(n, t, "无法获取你的 OpenID，请稍后再试。"); return true; }
     const cost = Date.now() - (e._startTime || Date.now());
-    const content = [
-      `${ke(e)}`,
-      `你的OpenID是: ${openid}`,
-      `> 响应用时: ${cost}ms`
-    ].join("\n");
+    const content = [`${ke(e)}`, `你的OpenID是: ${openid}`, `> 响应用时: ${cost}ms`].join("\n");
     await G(n, t, content);
     return true;
   }
@@ -1320,13 +1327,8 @@ async function We(n, e, t) {
   if (r === "切换全局回复模式") {
     if (!P(n, e)) return true;
     const cur = getAtReplySetting(n, { scope: "global" });
-    const ok = saveConfig(n, (config) => {
-      config.replyAtGlobal = !cur;
-    });
-    if (!ok) {
-      await _(n, t, e, "保存配置失败。");
-      return true;
-    }
+    const ok = saveConfig(n, (config) => { config.replyAtGlobal = !cur; });
+    if (!ok) { await _(n, t, e, "保存配置失败。"); return true; }
     await _(n, t, e, `全局回复模式已切换为【${!cur ? "带艾特" : "纯文本"}】`);
     return true;
   }
@@ -1335,10 +1337,7 @@ async function We(n, e, t) {
     if (t.scope !== "group" || !B(n, e)) return true;
     const cur = getAtReplySetting(n, t);
     const ok = setAtReplySetting(n, t, !cur);
-    if (!ok) {
-      await _(n, t, e, "保存配置失败。");
-      return true;
-    }
+    if (!ok) { await _(n, t, e, "保存配置失败。"); return true; }
     await _(n, t, e, `本群回复模式已切换为【${!cur ? "带艾特" : "纯文本"}】`);
     return true;
   }
@@ -1347,42 +1346,93 @@ async function We(n, e, t) {
     if (!P(n, e)) return true;
     const cur = getAtReplySetting(n, { scope: "c2c" });
     const ok = setAtReplySetting(n, { scope: "c2c" }, !cur);
-    if (!ok) {
-      await _(n, t, e, "保存配置失败。");
-      return true;
-    }
+    if (!ok) { await _(n, t, e, "保存配置失败。"); return true; }
     await _(n, t, e, `私聊回复模式已切换为【${!cur ? "带艾特" : "纯文本"}】`);
     return true;
   }
 
-  // ============= 普通用户专属菜单 =============
+  // 普通用户专属菜单
   if (r === "问答菜单" || r === "问答帮助" || r === "问答指南") {
     await _(n, t, e, CeUser());
     return true;
   }
 
-  // ============= 问答系统：仅主人/管理员可用 =============
-  if (r === "问答系统") {
+  // ============ 板块指令 ============
+  const subMatch = r.match(CMD_SUB);
+  if (subMatch) {
+    const section = subMatch[1];
     const isOwner = P(n, e);
     const isGroupAdmin = t.scope === "group" && B(n, e);
-    if (!isOwner && !isGroupAdmin) {
-      // 普通用户误发时，引导他们使用“问答菜单”
-      await _(n, t, e, "你没有管理权限哦～\n如需查看问答使用说明，请发送：\n问答菜单");
+
+    if (section === "主人") {
+      if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能打开主人管理板块。"); return true; }
+      await _(n, t, e, CeMaster(n), KB_MASTER);
       return true;
     }
-    const globalConfig = getConfig(n);
-    await _(n, t, e, Ce({
-      owner: isOwner,
-      group: t.scope === "group",
-      manageGroup: isGroupAdmin,
-      atReplyGlobal: globalConfig.replyAtGlobal !== false,
-      atReplyGroup: t.scope === "group" ? getAtReplySetting(n, t) : false,
-      atReplyPrivate: globalConfig.replyAtPrivate !== undefined ? globalConfig.replyAtPrivate : (globalConfig.replyAtGlobal !== false)
-    }));
+
+    if (section === "清空") {
+      if (!isOwner) { await _(n, t, e, "只有主人才能打开清空操作板块。"); return true; }
+      await _(n, t, e, CeClear(n), KB_CLEAR);
+      return true;
+    }
+
+    if (section === "全局" || section === "私聊") {
+      if (!isOwner) { await _(n, t, e, `只有主人才能打开${section}问答板块。`); return true; }
+      await _(n, t, e, section === "全局" ? CeGlobal(n) : CePrivate(n), section === "全局" ? KB_GLOBAL : KB_PRIVATE);
+      return true;
+    }
+
+    if (section === "本群") {
+      if (t.scope !== "group") { await _(n, t, e, "本群问答板块仅支持在群聊中使用。"); return true; }
+      if (!B(n, e)) { await _(n, t, e, "你不是本群群主或管理员，无法打开本群问答板块。"); return true; }
+      await _(n, t, e, CeGroup(n, t), KB_GROUP);
+      return true;
+    }
+
+    if (section === "延时") {
+      if (t.scope !== "group") { await _(n, t, e, "延时问答板块仅支持在群聊中使用。"); return true; }
+      if (!B(n, e)) { await _(n, t, e, "你不是本群群主或管理员，无法打开延时问答板块。"); return true; }
+      await _(n, t, e, CeDelay(n), KB_DELAY);
+      return true;
+    }
+
+    if (section === "回复") {
+      if (!isOwner && !isGroupAdmin) { await _(n, t, e, "你没有权限打开回复模式板块。"); return true; }
+      const cfg = getConfig(n);
+      await _(n, t, e, CeReply({
+        owner: isOwner,
+        group: t.scope === "group",
+        manageGroup: isGroupAdmin,
+        atReplyGlobal: cfg.replyAtGlobal !== false,
+        atReplyGroup: t.scope === "group" ? getAtReplySetting(n, t) : false,
+        atReplyPrivate: cfg.replyAtPrivate !== undefined ? cfg.replyAtPrivate : (cfg.replyAtGlobal !== false)
+      }), kbReply({ owner: isOwner }, t.scope));
+      return true;
+    }
     return true;
   }
 
-  // ============= 问答词列表：所有人可查看 =============
+  // ============ 主菜单 ============
+  if (CMD_MAIN.test(r)) {
+    const isOwner = P(n, e);
+    const isGroupAdmin = t.scope === "group" && B(n, e);
+    if (!isOwner && !isGroupAdmin) {
+      await _(n, t, e, "你没有管理权限哦～\n如需查看问答使用说明，请发送：\n问答菜单");
+      return true;
+    }
+    const cfg = getConfig(n);
+    await _(n, t, e, CeMain({
+      owner: isOwner,
+      fixedOwner: isOwnerOnly(n, e),
+      group: t.scope === "group",
+      manageGroup: isGroupAdmin,
+      atReplyGlobal: cfg.replyAtGlobal !== false,
+      atReplyGroup: t.scope === "group" ? getAtReplySetting(n, t) : false,
+      atReplyPrivate: cfg.replyAtPrivate !== undefined ? cfg.replyAtPrivate : (cfg.replyAtGlobal !== false)
+    }), MAIN_KEYBOARD);
+    return true;
+  }
+
   const o = r.match(Ie);
   if (o) {
     const u = o[1] || "问答词列表", f = Be(String(o[2] || "")), p = await Qe(n, e, t, f, u);
@@ -1393,36 +1443,21 @@ async function We(n, e, t) {
   const i = r.match(Ue);
   if (i) {
     const u = i[1];
-    if (u === "本群") {
-      if (t.scope !== "group" || !B(n, e)) return !0;
-    } else if (!Y(n, e))
-      return !0;
+    if (u === "本群") { if (t.scope !== "group" || !B(n, e)) return !0; }
+    else if (!Y(n, e)) return !0;
     const f = Fe(String(i[2] || ""));
-    if (!f.ok)
-      return await _(n, t, e, "撤回时间需为 **0–600** 的整数秒，未做保存。0 表示不撤回。"), !0;
+    if (!f.ok) return await _(n, t, e, "撤回时间需为 **0–600** 的整数秒，未做保存。0 表示不撤回。"), !0;
     const p = u === "本群" ? S(e) || "unknown" : u;
-    return Dn(n, p, f.seconds), await _(
-      n,
-      t,
-      e,
-      f.seconds === 0 ? `已设置【${u}】答案撤回时间为 0 秒（不撤回）` : `已设置【${u}】答案撤回时间为 ${f.seconds} 秒`
-    ), !0;
+    return Dn(n, p, f.seconds), await _(n, t, e, f.seconds === 0 ? `已设置【${u}】答案撤回时间为 0 秒（不撤回）` : `已设置【${u}】答案撤回时间为 ${f.seconds} 秒`), !0;
   }
 
   const c = r.match(Ge);
   if (c) {
     if (!Y(n, e)) return !0;
     const u = c[1], f = zn(n, u);
-    return await _(n, t, e, [
-      `已清空全部【${u}问答】`,
-      "",
-      "- 全局：已清空",
-      "- 私聊：已清空",
-      `- 群聊目录：${f} 个`
-    ].join(`\n`)), !0;
+    return await _(n, t, e, [`已清空全部【${u}问答】`, "", "- 全局：已清空", "- 私聊：已清空", `- 群聊目录：${f} 个`].join(`\n`)), !0;
   }
 
-  // 先处理延时毫秒（避免被延时秒部分误匹配）
   const cMs = r.match(EeMs);
   if (cMs) {
     const op = cMs[1], type = cMs[2], q = String(cMs[3] || ""), ans = String(cMs[4] || "");
@@ -1431,23 +1466,13 @@ async function We(n, e, t) {
     if (op === "添加") {
       const parts = ans.split("#");
       if (parts.length < 2) return await _(n, t, e, "添加延时毫秒问答格式：添加延时毫秒精准问答#问题#答案#毫秒数"), true;
-      const realAns = parts[0];
-      const delayStr = parts[1];
-      const suffix = parts[2];
-      const delayNum = parseInt(delayStr, 10);
+      const realAns = parts[0], delayStr = parts[1], suffix = parts[2], delayNum = parseInt(delayStr, 10);
       if (isNaN(delayNum) || delayNum < 1 || delayNum > 60000) return await _(n, t, e, "延迟时间需为1-60000毫秒整数！"), true;
-      let at;
-      if (suffix === 'N@') at = false;
-      else if (suffix === 'Y@') at = true;
+      let at; if (suffix === 'N@') at = false; else if (suffix === 'Y@') at = true;
       const g = S(e) || "unknown";
       return fnMs(n, e, t, "添加", type, g, q, realAns, delayNum, at);
-    } else if (op === "删除") {
-      const g = S(e) || "unknown";
-      return fnMs(n, e, t, "删除", type, g, q, "", 1);
-    } else if (op === "清空") {
-      const g = S(e) || "unknown";
-      return fnMs(n, e, t, "清空", type, g, "", "", 1);
-    }
+    } else if (op === "删除") { const g = S(e) || "unknown"; return fnMs(n, e, t, "删除", type, g, q, "", 1); }
+    else if (op === "清空") { const g = S(e) || "unknown"; return fnMs(n, e, t, "清空", type, g, "", "", 1); }
     return true;
   }
 
@@ -1459,23 +1484,13 @@ async function We(n, e, t) {
     if (op === "添加") {
       const parts = ans.split("#");
       if (parts.length < 2) return await _(n, t, e, "添加延时问答格式：添加延时精准问答#问题#答案#秒数"), true;
-      const realAns = parts[0];
-      const delayStr = parts[1];
-      const suffix = parts[2];
-      const delayNum = parseInt(delayStr, 10);
+      const realAns = parts[0], delayStr = parts[1], suffix = parts[2], delayNum = parseInt(delayStr, 10);
       if (isNaN(delayNum) || delayNum < 1 || delayNum > 60) return await _(n, t, e, "延迟时间需为1-60秒整数！"), true;
-      let at;
-      if (suffix === 'N@') at = false;
-      else if (suffix === 'Y@') at = true;
+      let at; if (suffix === 'N@') at = false; else if (suffix === 'Y@') at = true;
       const g = S(e) || "unknown";
       return fn(n, e, t, "添加", type, g, q, realAns, delayNum, at);
-    } else if (op === "删除") {
-      const g = S(e) || "unknown";
-      return fn(n, e, t, "删除", type, g, q, "", 1);
-    } else if (op === "清空") {
-      const g = S(e) || "unknown";
-      return fn(n, e, t, "清空", type, g, "", "", 1);
-    }
+    } else if (op === "删除") { const g = S(e) || "unknown"; return fn(n, e, t, "删除", type, g, q, "", 1); }
+    else if (op === "清空") { const g = S(e) || "unknown"; return fn(n, e, t, "清空", type, g, "", "", 1); }
     return true;
   }
 
@@ -1501,85 +1516,46 @@ async function Ye(n, e, t) {
   if (!r) return !1;
   const o = t.scope === "group" ? S(e) || "unknown" : "私聊", i = Ee(n, r, o);
   if (i == null) return !1;
-
   const atReply = i.at !== undefined ? i.at : getAtReplySetting(n, t);
   const prefix = atReply ? `${ke(e)}` : "";
-
   let answerText = i.answer;
-
   if (atReply) {
     const cost = Date.now() - (e._startTime || Date.now());
     answerText += `\n> 响应用时: ${cost}ms`;
   }
-
-  if (i.delay > 0) {
-    await new Promise(resolve => setTimeout(resolve, i.delay));
-  }
-
+  if (i.delay > 0) await new Promise(resolve => setTimeout(resolve, i.delay));
   const s = await we(n, t, v(answerText), prefix);
   en(n, t, s, Z(n, i.scope)), !0;
   return true;
 }
 
 const Ke = [
-  {
-    key: "ownerOpenId",
-    type: "string",
-    label: "主人OpenID",
-    description: "全局 / 私聊问答仅此 user_openid 可改；本群问答主人或群主/管理员均可",
-    default: "7014ACA9441AF768BC9E9D5EED7EAE9B",
-    placeholder: "6A511E72CB258111C323EBD3EE3A081B"
-  },
-  {
-    key: "replyAtGlobal",
-    type: "boolean",
-    label: "全局回复带艾特",
-    description: "全局默认是否带艾特，默认开启",
-    default: true
-  },
-  {
-    key: "replyAtPrivate",
-    type: "boolean",
-    label: "私聊回复带艾特",
-    description: "私聊环境是否带艾特，默认开启",
-    default: true
-  }
+  { key: "ownerOpenId", type: "string", label: "固定操作者 OpenID", description: "唯一固定操作者，可以添加/删除其他主人；全局 / 私聊问答仅此 openid 或主人列表成员可改", default: "6E0B188704AC0611617425B687DB9034", placeholder: "6A511E72CB258111C323EBD3EE3A081B" },
+  { key: "botOpenId", type: "string", label: "机器人 OpenID（可选）", description: "填写后，问答列表的「测试问答」按钮会填入「@机器人 问题」格式；不填则只填问题文本，需手动 @ 机器人", default: "", placeholder: "例如：A1B2C3D4E5F6..." },
+  { key: "replyAtGlobal", type: "boolean", label: "全局回复带艾特", description: "全局默认是否带艾特，默认开启", default: true },
+  { key: "replyAtPrivate", type: "boolean", label: "私聊回复带艾特", description: "私聊环境是否带艾特，默认开启", default: true }
 ], xe = Ke;
 
-async function ve(n) {
-  n.logger?.info?.("[GF_qa] 官方问答插件已加载");
-}
+async function ve(n) { n.logger?.info?.("[GF_qa] 官方问答插件已加载"); }
 
-async function nt(n) {
-  he(), n.logger?.info?.("[GF_qa] 插件已卸载");
-}
+async function nt(n) { he(), n.logger?.info?.("[GF_qa] 插件已卸载"); }
 
 async function et(n, e) {
   if (!e || typeof e != "object" || (dn(e, n.logger), !ne(e))) return;
   e._startTime = Date.now();
-
   let t;
-  try {
-    t = ee(e);
-  } catch (r) {
-    n.logger?.warn?.("[GF_qa] 无法解析发送目标:", r?.message || r);
-    return;
-  }
+  try { t = ee(e); }
+  catch (r) { n.logger?.warn?.("[GF_qa] 无法解析发送目标:", r?.message || r); return; }
   try {
     if (await We(n, e, t)) return;
     await Ye(n, e, t);
-  } catch (r) {
-    n.logger?.error?.("[GF_qa] 处理消息失败:", r?.message || r);
-  }
+  } catch (r) { n.logger?.error?.("[GF_qa] 处理消息失败:", r?.message || r); }
 }
 
 async function tt(n, e) {
   if (!e || typeof e != "object") return;
   const t = String(e.t ?? "").trim();
-  if (t === "GROUP_MEMBER_REMOVE") {
-    In(e);
-    return;
-  }
+  if (t === "GROUP_MEMBER_REMOVE") { In(e); return; }
   t === "GROUP_MEMBER_ADD" && dn(e, n.logger);
 }
 
