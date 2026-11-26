@@ -16,6 +16,8 @@ function 注入样式() {
   s.id = 'wenda-console-style';
   s.textContent = `
 .wd{--bg:#f6f8fb;--card:#fff;--line:#e4e9f0;--txt:#1f2937;--sub:#64748b;--accent:#0f766e;--accent2:#14b8a6;--danger:#dc2626;--warn:#d97706;--ok:#059669;
+  /* 星甲同款层次：正文深色正常字，说明/次要信息统一灰色 */
+  --muted:#94a3b8;--quote-bg:#f8fafc;
   box-sizing:border-box;color:var(--txt);background:var(--bg);min-height:100%;font-size:13px;line-height:1.55;padding:0 0 32px}
 .wd *{box-sizing:border-box}
 .wd .head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff}
@@ -31,8 +33,10 @@ function 注入样式() {
 .wd .cols2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
 .wd .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 2px 8px #0f172a08}
 .wd .card h3{margin:0 0 10px;font-size:13px;font-weight:700;color:var(--txt)}
+.wd .sec{font-weight:700;color:var(--txt);padding-left:8px;border-left:3px solid var(--accent)}
 .wd .k{font-size:11px;color:var(--sub)}
-.wd .v{font-size:18px;font-weight:700;color:var(--accent);margin-top:3px;word-break:break-all}
+.wd .quote{color:var(--sub);background:var(--quote-bg);border-left:3px solid var(--line);padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px}
+.wd .v{font-size:18px;font-weight:700;color:var(--txt);margin-top:3px;word-break:break-all}
 .wd .btn{border:1px solid var(--line);background:#fff;color:var(--txt);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;transition:.15s}
 .wd .btn:hover{border-color:var(--accent);color:var(--accent)}
 .wd .btn:disabled{opacity:.5;cursor:not-allowed}
