@@ -1,14 +1,18 @@
 # 问答系统 · 使用说明（QQ 官方机器人）
 
-![版本](https://img.shields.io/badge/version-1.3.0-blue)
+![版本](https://img.shields.io/badge/version-1.3.1-blue)
 
-> 版本：**1.3.0**  
+> 版本：**1.3.1**  
 > 插件目录：`GF-plugin-wenda`  
 > 显示名：问答系统  
 > 原作者：三个句号，二改作者：天道化逍遥  
 > 本插件走 **kakake GF 官方车道**，对接 QQ 开放平台机器人，**不是** OneBot / NapCat 野生协议。
 
 ---
+
+## 📢 v1.3.1 更新日志
+
+- ✅ **在线更新严格写入插件安装源目录**（仿星甲取源目录逻辑）：框架项目根 → pluginManager → 从运行副本反推 → `plugins/` 自身，四重兜底定位 `plugins/GF-plugin-wenda/`，控制台里能直接看到并删除该插件文件夹。
 
 ## 📢 v1.3.0 更新日志
 
