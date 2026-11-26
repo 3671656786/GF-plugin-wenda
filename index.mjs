@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.3";
+  return "1.3.4";
 }
 
 function getConfig(n) {
@@ -855,269 +855,232 @@ function un(n, e, t) {
 
 function O(n, e) { n.length && n.push("***"), n.push(...e); }
 
+/* ============================================================
+ * 星甲同款视觉语言（v1.3.4）：
+ *   ## 大标题       —— 面板主题，一眼定位
+ *   **▍分区**        —— 黑色加粗小标题，划分板块
+ *   > 灰色引用块      —— 承载说明、细节、次要信息
+ *   蓝色 <qqbot-cmd-input> —— 可点击指令（kn() 已实现）
+ * 原则：正常字讲结论，灰字讲细节，蓝字给操作。
+ * ============================================================ */
+function 大标题(文) { return `## ${文}`; }
+function 分区(文) { return `**▍${文}**`; }
+function 灰块(行组) {
+  return (Array.isArray(行组) ? 行组 : [行组]).map((x) => {
+    const t = String(x ?? "");
+    return t === "" ? ">" : `> ${t}`;
+  }).join("\n");
+}
+function 灰混(部件) {
+  return (Array.isArray(部件) ? 部件 : []).map((x) => {
+    const t = String((x && x[0]) ?? "");
+    return x && x[1] === false ? `**${t}**` : (t === "" ? ">" : `> ${t}`);
+  }).join("\n");
+}
+function 蓝链(项) {
+  return (Array.isArray(项) ? 项 : [])
+    .filter((x) => x && x[0])
+    .map((x) => kn(x[0], x[1] || x[0]))
+    .join("  ");
+}
+function 页脚() { return 灰块(["点击蓝字直接填入指令，也可点底部按钮。"]); }
+function 反馈(标题, 行组) { return `${分区(标题)}\n${灰块(行组)}`; }
+
 // ============ 普通用户专属菜单 ============
 function CeUser() {
-  const e = [];
-  O(e, [
-    "**📖 问答系统 · 使用指南**",
+  return [
+    大标题("问答系统 · 使用指南"),
     "",
-    "本群已开启问答功能，你可以：",
+    分区("你可以"),
+    灰块(["本群已开启问答功能，发送问答词即刻得到对应回答。", "有些答案会延迟回复，请稍等片刻。"]),
     "",
-    "**1. 查看本群问答列表**",
-    l("问答词列表#1", "点击查看本群问答"),
+    分区("查看本群问答"),
+    灰块([蓝链([["问答词列表#1", "点击查看本群问答"]])]),
     "",
-    "**2. 直接触发回答**",
-    "在群里发送问答词，即可获得对应回答",
+    分区("我的账号"),
+    灰块([蓝链([["我的账号", "点击获取你的 OpenID"]])]),
     "",
-    "**3. 关于延时问答**",
-    "部分问答会有延迟回复，请耐心等待",
-    "",
-    "如需新增、修改或删除问答，请联系群主或管理员。"
-  ]);
-  O(e, [
-    "",
-    "**🔑 我的账号**",
-    l("我的账号", "点击获取你的 OpenID")
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 // ============ 主菜单 ============
 function CeMain(n) {
-  const e = [];
-  const identity = n.fixedOwner ? "👑 固定操作者" : (n.owner ? "👑 主人" : "🛡️ 群管理员");
-
-  O(e, [
-    "**📋 问答系统 · 主菜单**",
+  const identity = n.fixedOwner ? "固定操作者" : (n.owner ? "主人" : "群管理员");
+  const e = [
+    大标题("问答系统 · 主菜单"),
     "",
-    `👤 当前身份：**${identity}**`,
+    分区("当前身份"),
+    灰块([`**${identity}**`]),
     "",
-    "**📌 板块导航**"
-  ]);
-
-  if (n.fixedOwner) O(e, [l("问答系统-主人", "👑 主人管理")]);
-  if (n.owner || (n.group && n.manageGroup)) O(e, [l("问答系统-回复", "🎭 回复模式")]);
-  if (n.group && n.manageGroup) O(e, [l("问答系统-本群", "📚 本群问答")]);
+    分区("板块导航"),
+  ];
+  const 板块 = [];
+  if (n.fixedOwner) 板块.push(["主人管理", "添加 / 删除主人，查看列表", [["问答系统-主人", "👑 主人管理"]]]);
+  if (n.owner || (n.group && n.manageGroup)) 板块.push(["回复模式", "全局 / 本群 / 私聊独立设置", [["问答系统-回复", "🎭 回复模式"]]]);
+  if (n.group && n.manageGroup) 板块.push(["本群问答", "添加 / 删除 / 清空本群词库", [["问答系统-本群", "📚 本群问答"]]]);
   if (n.owner) {
-    O(e, [l("问答系统-全局", "🌍 全局问答")]);
-    O(e, [l("问答系统-私聊", "💬 私聊问答")]);
+    板块.push(["全局问答", "添加 / 删除 / 清空全局词库", [["问答系统-全局", "🌍 全局问答"]]]);
+    板块.push(["私聊问答", "添加 / 删除 / 清空私聊词库", [["问答系统-私聊", "💬 私聊问答"]]]);
   }
-  if (n.group && n.manageGroup) O(e, [l("问答系统-延时", "⏱️ 延时问答")]);
-  if (n.owner) O(e, [l("问答系统-清空", "🗑️ 清空操作")]);
-  if (n.owner) O(e, [
-    "",
-    "**🔄 版本与更新**",
-    l("问答检查更新", "检查最新版本（含官方签名）"),
-    l("问答版本", "查看当前版本"),
-    l("问答更新源", "切换下载源"),
-  ]);
-
-  O(e, [
-    "",
-    "**🔍 快速查看**",
-    l("问答词列表#1", "查看问答词列表")
-  ]);
-
-  O(e, [
-    "",
-    "**🔑 我的账号**",
-    l("我的账号", "点击获取你的 OpenID")
-  ]);
-
-  O(e, [
-    "",
-    "💡 点击上方蓝字可直接填充对应指令",
-    "💡 指令前面可加 `/`，例如 `/问答系统`、`/添加精准问答#你好#你好呀`",
-    "⌨️ 底部【常用功能】按钮：点一下会把指令自动填进聊天栏"
-  ]);
-
-  return e.join(`\n`);
+  if (n.group && n.manageGroup) 板块.push(["延时问答", "秒 / 毫秒两种延迟", [["问答系统-延时", "⏱️ 延时问答"]]]);
+  if (n.owner) 板块.push(["清空操作", "一键清空全部词库（不可撤销）", [["问答系统-清空", "🗑️ 清空操作"]]]);
+  for (const [名, 说明, 链接] of 板块) e.push(灰块([`**${名}** · ${说明}`, 蓝链(链接)]), "");
+  if (n.owner) {
+    e.push(分区("版本与更新"));
+    e.push(灰块([
+      "检查最新版本与官方签名：",
+      蓝链([["问答检查更新", "检查更新"], ["问答版本", "当前版本"], ["问答更新源", "下载源"]]),
+    ]), "");
+  }
+  e.push(分区("快速查看"));
+  e.push(灰块([蓝链([["问答词列表#1", "查看问答词列表"], ["我的账号", "我的 OpenID"]])]), "");
+  e.push(灰块(["指令前可加 `/`，例如 `/问答系统`、`/添加精准问答#你好#你好呀`。"]));
+  e.push(页脚());
+  return e.join("\n");
 }
 
 // ============ 👑 主人管理 ============
 function CeMaster(n) {
-  const e = [];
   const masters = getMasters(n);
-  O(e, [
-    "**👑 主人管理**",
+  return [
+    大标题("主人管理"),
     "",
-    `固定操作者：\`${Tn(n)}\``,
-    `其他主人：${masters.length} 位`,
+    分区("当前"),
+    灰块([`固定操作者：\`${Tn(n)}\``, `其他主人：${masters.length} 位`]),
     "",
-    "**📌 添加主人**",
-    l("加主人+OpenID", "加主人+OpenID"),
-    "可省略 `+`：`加主人 OpenID` / `加主人OpenID`",
+    分区("添加主人"),
+    灰块(["格式 `加主人+OpenID`，加号 / 空格 / # 可省略。", 蓝链([["加主人+OpenID", "加主人+OpenID"]])]),
     "",
-    "**📌 删除主人**",
-    l("删主人+OpenID", "删主人+OpenID"),
-    "可省略 `+`：`删主人 OpenID` / `删主人OpenID`",
+    分区("删除主人"),
+    灰块(["格式 `删主人+OpenID`，可省略加号。", 蓝链([["删主人+OpenID", "删主人+OpenID"]])]),
     "",
-    "**📌 其他操作**",
-    l("查看主人列表", "查看主人列表"),
-    l("清空主人", "清空主人（保留固定操作者）"),
+    分区("其他操作"),
+    灰块([蓝链([["查看主人列表", "查看主人列表"], ["清空主人", "清空主人"]])]),
     "",
-    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 // ============ 🎭 回复模式 ============
 function CeReply(n) {
-  const e = [];
-  const globalMode = n.atReplyGlobal ? "带艾特" : "纯文本";
-  const groupMode = n.atReplyGroup ? "带艾特" : "纯文本";
-  const privateMode = n.atReplyPrivate ? "带艾特" : "纯文本";
-
-  O(e, ["**🎭 回复模式**", ""]);
-
-  if (n.owner) O(e, [`🌍 全局：**${globalMode}**`, l("切换全局回复模式", "切换全局回复模式")]);
-  if (n.group && n.manageGroup) O(e, ["", `📚 本群：**${groupMode}**`, l("切换本群回复模式", "切换本群回复模式")]);
-  if (n.owner) O(e, ["", `💬 私聊：**${privateMode}**`, l("切换私聊回复模式", "切换私聊回复模式")]);
-
-  O(e, ["", "**💡 优先级**", "单条答案后缀 > 范围模式 > 全局模式", "", "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"]);
-  return e.join(`\n`);
+  const e = [大标题("回复模式"), ""];
+  if (n.owner) e.push(分区("全局"), 灰块([`当前：**${n.atReplyGlobal ? "带艾特" : "纯文本"}**`, 蓝链([["切换全局回复模式", "切换全局回复模式"]])]), "");
+  if (n.group && n.manageGroup) e.push(分区("本群"), 灰块([`当前：**${n.atReplyGroup ? "带艾特" : "纯文本"}**`, 蓝链([["切换本群回复模式", "切换本群回复模式"]])]), "");
+  if (n.owner) e.push(分区("私聊"), 灰块([`当前：**${n.atReplyPrivate ? "带艾特" : "纯文本"}**`, 蓝链([["切换私聊回复模式", "切换私聊回复模式"]])]), "");
+  e.push(分区("优先级"), 灰块(["单条答案后缀 > 范围模式 > 全局模式。"]), "", 页脚());
+  return e.join("\n");
 }
 
 // ============ 📚 本群问答 ============
 function CeGroup(n, t) {
-  const e = [];
   const groupId = t && t.group_openid ? t.group_openid : "unknown";
   const rt = Z(n, groupId);
-  O(e, [
-    "**📚 本群问答**",
+  return [
+    大标题("本群问答"),
     "",
-    `当前撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`,
+    分区("当前"),
+    灰块([`撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`]),
     "",
-    "**📌 添加**",
-    l("添加精准问答#问题#答案", "添加精准问答#问题#答案"),
-    l("添加模糊问答#问题#答案", "添加模糊问答#问题#答案"),
+    分区("添加"),
+    灰块([蓝链([["添加精准问答#问题#答案", "添加精准"], ["添加模糊问答#问题#答案", "添加模糊"]])]),
     "",
-    "**📌 删除**",
-    l("删除精准问答#问题", "删除精准问答#问题"),
-    l("删除模糊问答#问题", "删除模糊问答#问题"),
+    分区("删除 / 清空"),
+    灰块([蓝链([["删除精准问答#问题", "删精准"], ["删除模糊问答#问题", "删模糊"], ["清空精准问答", "清精准"], ["清空模糊问答", "清模糊"]])]),
     "",
-    "**📌 清空**",
-    l("清空精准问答", "清空精准问答"),
-    l("清空模糊问答", "清空模糊问答"),
+    分区("设置"),
+    灰块([蓝链([["设置本群答案撤回时间#115", "撤回时间"]])]),
     "",
-    "**📌 设置**",
-    l("设置本群答案撤回时间#115", "设置本群答案撤回时间#120"),
+    分区("单条艾特控制"),
+    灰块(["答案末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特。"]),
     "",
-    "**💡 单条答案艾特控制**",
-    "末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特",
-    "",
-    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 // ============ 🌍 全局问答 ============
 function CeGlobal(n) {
-  const e = [];
   const rt = Z(n, "全局");
-  O(e, [
-    "**🌍 全局问答**",
+  return [
+    大标题("全局问答"),
     "",
-    `当前撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`,
+    分区("当前"),
+    灰块([`撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`]),
     "",
-    "**📌 添加**",
-    l("添加全局精准问答#问题#答案", "添加全局精准问答#问题#答案"),
-    l("添加全局模糊问答#问题#答案", "添加全局模糊问答#问题#答案"),
+    分区("添加"),
+    灰块([蓝链([["添加全局精准问答#问题#答案", "添加精准"], ["添加全局模糊问答#问题#答案", "添加模糊"]])]),
     "",
-    "**📌 删除**",
-    l("删除全局精准问答#问题", "删除全局精准问答#问题"),
-    l("删除全局模糊问答#问题", "删除全局模糊问答#问题"),
+    分区("删除 / 清空"),
+    灰块([蓝链([["删除全局精准问答#问题", "删精准"], ["删除全局模糊问答#问题", "删模糊"], ["清空全局精准问答", "清精准"], ["清空全局模糊问答", "清模糊"]])]),
     "",
-    "**📌 清空**",
-    l("清空全局精准问答", "清空全局精准问答"),
-    l("清空全局模糊问答", "清空全局模糊问答"),
+    分区("设置"),
+    灰块([蓝链([["设置全局答案撤回时间#115", "撤回时间"]])]),
     "",
-    "**📌 设置**",
-    l("设置全局答案撤回时间#115", "设置全局答案撤回时间#120"),
-    "",
-    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 // ============ 💬 私聊问答 ============
 function CePrivate(n) {
-  const e = [];
   const rt = Z(n, "私聊");
-  O(e, [
-    "**💬 私聊问答**",
+  return [
+    大标题("私聊问答"),
     "",
-    `当前撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`,
+    分区("当前"),
+    灰块([`撤回时间：**${rt === 0 ? "不撤回" : rt + " 秒"}**`]),
     "",
-    "**📌 添加**",
-    l("添加私聊精准问答#问题#答案", "添加私聊精准问答#问题#答案"),
-    l("添加私聊模糊问答#问题#答案", "添加私聊模糊问答#问题#答案"),
+    分区("添加"),
+    灰块([蓝链([["添加私聊精准问答#问题#答案", "添加精准"], ["添加私聊模糊问答#问题#答案", "添加模糊"]])]),
     "",
-    "**📌 删除**",
-    l("删除私聊精准问答#问题", "删除私聊精准问答#问题"),
-    l("删除私聊模糊问答#问题", "删除私聊模糊问答#问题"),
+    分区("删除 / 清空"),
+    灰块([蓝链([["删除私聊精准问答#问题", "删精准"], ["删除私聊模糊问答#问题", "删模糊"], ["清空私聊精准问答", "清精准"], ["清空私聊模糊问答", "清模糊"]])]),
     "",
-    "**📌 清空**",
-    l("清空私聊精准问答", "清空私聊精准问答"),
-    l("清空私聊模糊问答", "清空私聊模糊问答"),
+    分区("设置"),
+    灰块([蓝链([["设置私聊答案撤回时间#115", "撤回时间"]])]),
     "",
-    "**📌 设置**",
-    l("设置私聊答案撤回时间#115", "设置私聊答案撤回时间#120"),
-    "",
-    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 // ============ ⏱️ 延时问答 ============
 function CeDelay(n) {
-  const e = [];
-  O(e, [
-    "**⏱️ 延时问答**",
+  return [
+    大标题("延时问答"),
     "",
-    "**📌 延时秒（最长 60 秒）**",
-    l("添加延时精准问答#问题#答案#60", "添加延时精准问答#问题#答案#秒数"),
-    l("添加延时模糊问答#问题#答案#60", "添加延时模糊问答#问题#答案#秒数"),
-    l("删除延时精准问答#问题", "删除延时精准问答#问题"),
-    l("删除延时模糊问答#问题", "删除延时模糊问答#问题"),
-    l("清空延时精准问答", "清空延时精准问答"),
-    l("清空延时模糊问答", "清空延时模糊问答"),
+    分区("延时秒 · 最长 60 秒"),
+    灰块([蓝链([
+      ["添加延时精准问答#问题#答案#60", "加精准"], ["添加延时模糊问答#问题#答案#60", "加模糊"],
+      ["删除延时精准问答#问题", "删精准"], ["删除延时模糊问答#问题", "删模糊"],
+      ["清空延时精准问答", "清精准"], ["清空延时模糊问答", "清模糊"],
+    ])]),
     "",
-    "**📌 延时毫秒（最长 60000 毫秒）**",
-    l("添加延时毫秒精准问答#问题#答案#5000", "添加延时毫秒精准问答#问题#答案#毫秒数"),
-    l("添加延时毫秒模糊问答#问题#答案#5000", "添加延时毫秒模糊问答#问题#答案#毫秒数"),
-    l("删除延时毫秒精准问答#问题", "删除延时毫秒精准问答#问题"),
-    l("删除延时毫秒模糊问答#问题", "删除延时毫秒模糊问答#问题"),
-    l("清空延时毫秒精准问答", "清空延时毫秒精准问答"),
-    l("清空延时毫秒模糊问答", "清空延时毫秒模糊问答"),
+    分区("延时毫秒 · 最长 60000 毫秒"),
+    灰块([蓝链([
+      ["添加延时毫秒精准问答#问题#答案#5000", "加精准"], ["添加延时毫秒模糊问答#问题#答案#5000", "加模糊"],
+      ["删除延时毫秒精准问答#问题", "删精准"], ["删除延时毫秒模糊问答#问题", "删模糊"],
+      ["清空延时毫秒精准问答", "清精准"], ["清空延时毫秒模糊问答", "清模糊"],
+    ])]),
     "",
-    "**💡 单条答案艾特控制**",
-    "末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特",
-    "例：`添加延时精准问答#问题#答案#60#N@`",
+    分区("单条艾特控制"),
+    灰块(["答案末尾加 `#N@` = 纯文本，加 `#Y@` = 带艾特。", "例：`添加延时精准问答#问题#答案#60#N@`"]),
     "",
-    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 // ============ 🗑️ 清空操作 ============
 function CeClear(n) {
-  const e = [];
-  O(e, [
-    "**🗑️ 清空操作（全局）**",
+  return [
+    大标题("清空操作"),
     "",
-    "⚠️ **警告：以下操作不可撤销，请谨慎使用**",
+    分区("注意"),
+    灰块(["**以下操作不可撤销，请谨慎使用。**", "会同时清空全局、私聊、所有群目录的对应库；仅最高主人可执行。"]),
     "",
-    l("清空全部精准问答", "清空全部精准问答"),
-    l("清空全部模糊问答", "清空全部模糊问答"),
+    分区("执行"),
+    灰块([蓝链([["清空全部精准问答", "清空全部精准"], ["清空全部模糊问答", "清空全部模糊"]])]),
     "",
-    "说明：",
-    "- 会同时清空全局、私聊、所有群目录的对应库",
-    "- 仅最高主人可执行",
-    "",
-    "⌨️ 底部按钮：点一下会把指令自动填进聊天栏"
-  ]);
-  return e.join(`\n`);
+    页脚(),
+  ].join("\n");
 }
 
 const Te = /^(添加|删除|清空)(?!.*延时毫秒)(?!.*延时)(精准|模糊)问答(?:#([^\r\n#]+)(?:#([\s\S]*))?)?$/, Oe = /^(添加|删除|清空)(?!.*延时毫秒)(?!.*延时)(全局|私聊)(精准|模糊)问答(?:#([^\r\n#]+)(?:#([\s\S]*))?)?$/, Ge = /^清空全部(精准|模糊)问答$/, Ie = /^(问答词列表|详细问答词列表)(?:#([^\r\n#]*))?$/, Ue = /^设置(本群|私聊|全局)答案撤回时间(?:#([^\r\n#]*))?$/, Le = /^添加(?:全局|私聊)?(?:精准|模糊)问答#[^\r\n#]*#/, De = /^添加(?:全局|私聊)?(?:精准|模糊)问答#[^\r\n#]+/;
@@ -1195,23 +1158,28 @@ function Ne(n) {
   return e;
 }
 
-// 修复：新增「测试问答」按钮（点击后填入 @机器人 + 问题文本）
+// 问答列表项：问题用正常黑字，答案与操作放灰色引用块（星甲同款层次）
 async function ze(n, e, t, r) {
   if (!r.length) return "";
   const botId = getBotOpenId(n);
   const atPrefix = botId ? `<@!${botId}> ` : "";
-  let o = `### ${e}（${t}）\n\n`;
+  let o = `${大标题(`${e}（${t}）`)}\n`;
   for (const i of r) {
     const s = await An(n, i.answer, 96);
     const testBtn = kn(`${atPrefix}${i.question}`, "测试问答");
-    o += `${i.index}. ${kn(i.deleteFill, i.question)}\n${s || Hn(i.answer)}\n- ${testBtn}\n\n`;
+    o += `\n${分区(`${i.index}. ${i.question}`)}\n`;
+    o += 灰块([s || Hn(i.answer), `删除：${kn(i.deleteFill, "删除")}　测试：${testBtn}`]) + "\n";
   }
   return o;
 }
 
 function He(n, e, t) {
   const r = [`第 ${e}/${t} 页`];
-  return e > 1 && r.push(l(`${n}#${e - 1}`, "上一页")), e < t && r.push(l(`${n}#${e + 1}`, "下一页")), r.join(`\n`);
+  return 灰块([
+    ...r,
+    ...(e > 1 ? [kn(`${n}#${e - 1}`, "上一页")] : []),
+    ...(e < t ? [kn(`${n}#${e + 1}`, "下一页")] : []),
+  ]);
 }
 
 function F(n) { return n === "全局" || n === "私聊" ? n : "本群"; }
@@ -1236,18 +1204,19 @@ async function fn(n, e, t, r, o, i, s, c, delay = 0, atOverride = undefined) {
     let at = atOverride, answer = c;
     if (at === undefined) { const parsed = parseAtSuffix(answer); answer = parsed.content; at = parsed.at; }
     const a = await Je(n, e, s, answer);
-    if (a.ok === !1) return await _(n, t, e, a.error), !0;
-    if (Bn(n, i, fileSuffix, s) != null) return await _(n, t, e, `【${F(i)}${fileSuffix}问答】中已存在该词语啦～！如需修改请先删除哦～`), !0;
+    if (a.ok === !1) return await _(n, t, e, 反馈("添加失败", [a.error])), !0;
+    if (Bn(n, i, fileSuffix, s) != null) return await _(n, t, e, 反馈("添加失败", [`【${F(i)}${fileSuffix}问答】中已存在该词语，如需修改请先删除。`])), !0;
     let finalContent = a.content;
     if (delay > 0) finalContent = `${finalContent}\u0000${delay}`;
     if (at !== undefined) finalContent = `${finalContent}\u0001at=${at ? 1 : 0}`;
     qn(n, i, fileSuffix, s, finalContent);
     const f = F(i), p = await An(n, a.content, 96);
-    const delayText = delay > 0 ? `\n**延迟：** ${delay}秒` : "";
-    const atText = at === undefined ? "\n**回复模式：** 使用本群默认" : `\n**回复模式：** ${at ? "艾特" : "纯文本"}`;
-    return await je(n, t, e, `已新增【${f}${fileSuffix}问答】\n\n**问：** ${s}\n\n**答：** ${p}${delayText}${atText}`, jn(e, t)), !0;
+    const 明细 = [`**问：** ${s}`, `**答：** ${p}`];
+    if (delay > 0) 明细.push(`**延迟：** ${delay} 秒`);
+    明细.push(`**回复模式：** ${at === undefined ? "使用默认" : (at ? "艾特" : "纯文本")}`);
+    return await je(n, t, e, 反馈(`已新增 ${f}${fileSuffix}问答`, 明细), jn(e, t)), !0;
   }
-  return r === "删除" ? s ? Nn(n, i, fileSuffix, s) ? (await _(n, t, e, `好哒！已删除【${F(i)}${fileSuffix}问答】的「${s}」`), !0) : (await _(n, t, e, "好像木有这个哎～要不你仔细看看列表？"), !0) : (await _(n, t, e, "必填参数缺失！请带上要删除的问题。"), !0) : r === "清空" ? (N(n, i, fileSuffix), await _(n, t, e, `这就把【${F(i)}${fileSuffix}问答】的词语通通清空！`), !0) : !1;
+  return r === "删除" ? s ? Nn(n, i, fileSuffix, s) ? (await _(n, t, e, 反馈(`已删除 ${F(i)}${fileSuffix}问答`, [`问题：\`${s}\``])), !0) : (await _(n, t, e, 反馈("删除失败", ["没有这个问题，可先发「问答词列表」查看。"])), !0) : (await _(n, t, e, 反馈("参数缺失", ["请带上要删除的问题。"])), !0) : r === "清空" ? (N(n, i, fileSuffix), await _(n, t, e, 反馈(`已清空 ${F(i)}${fileSuffix}问答`, ["该范围词库已清空。"])), !0) : !1;
 }
 
 async function fnMs(n, e, t, r, o, i, s, c, delayMs = 0, atOverride = undefined) {
@@ -1256,26 +1225,27 @@ async function fnMs(n, e, t, r, o, i, s, c, delayMs = 0, atOverride = undefined)
     let at = atOverride, answer = c;
     if (at === undefined) { const parsed = parseAtSuffix(answer); answer = parsed.content; at = parsed.at; }
     const a = await Je(n, e, s, answer);
-    if (a.ok === !1) return await _(n, t, e, a.error), !0;
-    if (Bn(n, i, fileSuffix, s) != null) return await _(n, t, e, `【${F(i)}${fileSuffix}问答】中已存在该词语啦～！如需修改请先删除哦～`), !0;
+    if (a.ok === !1) return await _(n, t, e, 反馈("添加失败", [a.error])), !0;
+    if (Bn(n, i, fileSuffix, s) != null) return await _(n, t, e, 反馈("添加失败", [`【${F(i)}${fileSuffix}问答】中已存在该词语，如需修改请先删除。`])), !0;
     let finalContent = a.content;
     if (delayMs > 0) finalContent = `${finalContent}\u0000${delayMs}`;
     if (at !== undefined) finalContent = `${finalContent}\u0001at=${at ? 1 : 0}`;
     qn(n, i, fileSuffix, s, finalContent);
     const f = F(i), p = await An(n, a.content, 96);
-    const delayText = delayMs > 0 ? `\n**延迟：** ${delayMs}毫秒` : "";
-    const atText = at === undefined ? "\n**回复模式：** 使用本群默认" : `\n**回复模式：** ${at ? "艾特" : "纯文本"}`;
-    return await je(n, t, e, `已新增【${f}${fileSuffix}问答】\n\n**问：** ${s}\n\n**答：** ${p}${delayText}${atText}`, jn(e, t)), !0;
+    const 明细 = [`**问：** ${s}`, `**答：** ${p}`];
+    if (delayMs > 0) 明细.push(`**延迟：** ${delayMs} 毫秒`);
+    明细.push(`**回复模式：** ${at === undefined ? "使用默认" : (at ? "艾特" : "纯文本")}`);
+    return await je(n, t, e, 反馈(`已新增 ${f}${fileSuffix}问答`, 明细), jn(e, t)), !0;
   }
-  return r === "删除" ? s ? Nn(n, i, fileSuffix, s) ? (await _(n, t, e, `好哒！已删除【${F(i)}${fileSuffix}问答】的「${s}」`), !0) : (await _(n, t, e, "好像木有这个哎～要不你仔细看看列表？"), !0) : (await _(n, t, e, "必填参数缺失！请带上要删除的问题。"), !0) : r === "清空" ? (N(n, i, fileSuffix), await _(n, t, e, `这就把【${F(i)}${fileSuffix}问答】的词语通通清空！`), !0) : !1;
+  return r === "删除" ? s ? Nn(n, i, fileSuffix, s) ? (await _(n, t, e, 反馈(`已删除 ${F(i)}${fileSuffix}问答`, [`问题：\`${s}\``])), !0) : (await _(n, t, e, 反馈("删除失败", ["没有这个问题，可先发「问答词列表」查看。"])), !0) : (await _(n, t, e, 反馈("参数缺失", ["请带上要删除的问题。"])), !0) : r === "清空" ? (N(n, i, fileSuffix), await _(n, t, e, 反馈(`已清空 ${F(i)}${fileSuffix}问答`, ["该范围词库已清空。"])), !0) : !1;
 }
 
 async function Qe(n, e, t, r, o) {
   const i = P(n, e), s = t.scope === "group", c = qe(n, e, t);
-  if (!c.length) return !i && !s ? "" : i ? "好像木有过数据哎～" : "好像木有过数据哎～本群还没有问答。";
+  if (!c.length) return !i && !s ? "" : 反馈("暂无问答", [i ? "当前范围还没有问答，先添加一条吧。" : "本群还没有问答，联系群主或管理员添加。"]);
   const a = Ne(c), u = c.length * Ae, f = Me(a, u), p = f.length;
-  if (!p) return i ? "好像木有过数据哎～" : "好像木有过数据哎～本群还没有问答。";
-  if (r > p) return `没有这一页（共 ${p} 页）`;
+  if (!p) return 反馈("暂无问答", [i ? "当前范围还没有问答，先添加一条吧。" : "本群还没有问答，联系群主或管理员添加。"]);
+  if (r > p) return 反馈("页码越界", [`共 ${p} 页，请重新选择页码。`]);
   const y = f[r - 1] || [], g = [];
   for (const m of y) {
     const b = g[g.length - 1];
@@ -1283,8 +1253,8 @@ async function Qe(n, e, t, r, o) {
   }
   const $ = [];
   for (const m of g) $.push(await ze(n, m.title, m.total, m.items));
-  const M = $.filter(Boolean).join(`\n***\n`), C = He(o, r, p);
-  return C ? `${M}\n***\n${C}` : M;
+  const M = $.filter(Boolean).join("\n\n"), C = He(o, r, p);
+  return C ? `${M}\n\n${C}` : M;
 }
 
 // ============ 在线更新：检查 / 确认 / 风险确认 / 下载源 ============
@@ -1299,30 +1269,40 @@ async function 检查更新(n, e, t, 目标版本 = "") {
   const 源 = 取更新源(读更新设置(n.dataPath).源);
   const 查 = await 查最新发布(目标版本, 读GitHub令牌(n));
   if (!查.ok) {
-    await _(n, t, e, [
-      "🔍 **检查更新失败**", "", 查.原因, "",
-      `当前版本：v${当前}`,
-      `发布页：https://github.com/${更新仓库}/releases`
-    ].join("\n"), buildKeyboard([[kbBtn("qa_up_retry", "重新检查", "问答检查更新"), kbBtn("qa_up_src", "切换下载源", "问答更新源")]]));
+    await _(n, t, e, 反馈("检查更新失败", [
+      `当前版本：**v${当前}**`,
+      查.原因,
+      `发布页：https://github.com/${更新仓库}/releases`,
+    ]), buildKeyboard([[kbBtn("qa_up_retry", "重新检查", "问答检查更新"), kbBtn("qa_up_src", "切换下载源", "问答更新源")]]));
     return;
   }
   const 比较 = 比较更新版本(查.版本, 当前);
   const 签 = 查.签名;
   更新待确认.set(更新键(n, e), { 版本: 查.版本, 源: 源.键, 到期: Date.now() + 10 * 60 * 1000 });
   const 文本 = [
-    "🔄 **问答系统 · 在线更新**", "",
-    `当前版本：**v${当前}** → 最新版本：**v${查.版本}**`,
-    `状态：${比较 > 0 ? "🆕 发现新版本" : 比较 < 0 ? "⬇️ 目标是旧版本" : "✅ 已是最新版本"}`,
+    大标题("问答系统 · 在线更新"),
     "",
-    `🔒 ${签名摘要(签)}`,
+    分区("版本对比"),
+    灰块([
+      `当前 **v${当前}** → 最新 **v${查.版本}**`,
+      `状态：**${比较 > 0 ? "发现新版本" : 比较 < 0 ? "目标是旧版本" : "已是最新版本"}**`,
+    ]),
     "",
-    `下载源：${源.名}`,
-    查.发布时间 ? `发布时间：${String(查.发布时间).slice(0, 10)}` : "",
-    查.资产大小 ? `包大小：${Math.round(查.资产大小 / 1024)} KB` : "",
+    分区("官方签名"),
+    灰块([签名摘要(签)]),
     "",
-    "⚠️ 更新会替换插件文件并自动重载，聊天会短暂中断，问答数据不会丢失。",
-    比较 > 0 || 比较 < 0 ? "确认无误请点【确认更新】；若签名未通过，会要求再次确认风险。" : "",
-  ].filter(Boolean).join("\n");
+    分区("详情"),
+    灰块([
+      `下载源：${源.名}`,
+      查.发布时间 ? `发布时间：${String(查.发布时间).slice(0, 10)}` : "",
+      查.资产大小 ? `包大小：${Math.round(查.资产大小 / 1024)} KB` : "",
+    ].filter(Boolean)),
+    "",
+    灰块([
+      "更新会替换插件文件并自动重载，聊天会短暂中断，问答数据不会丢失。",
+      比较 > 0 || 比较 < 0 ? "确认无误请点【确认更新】；若签名未通过，会要求再次确认风险。" : "",
+    ].filter(Boolean)),
+  ].join("\n");
   await _(n, t, e, 文本, buildKeyboard([
     [kbBtn("qa_up_go", "确认更新", "确认更新"), kbBtn("qa_up_risk", "承担风险更新", "确认更新#风险")],
     [kbBtn("qa_up_src", "切换下载源", "问答更新源"), kbBtn("qa_up_cancel", "取消更新", "取消更新", 0)],
@@ -1336,41 +1316,40 @@ async function 执行确认更新(n, e, t, 参数文本 = "") {
   const 待 = 更新待确认.get(更新键(n, e));
   更新待确认.delete(更新键(n, e));
   if (!指定版本 && (!待 || 待.到期 < Date.now())) {
-    await _(n, t, e, "请先发「问答检查更新」查看版本，再发「确认更新」。");
+    await _(n, t, e, 反馈("无法确认更新", ["请先发「问答检查更新」查看版本，再发「确认更新」。"]));
     return;
   }
   const 目标版本 = 指定版本 || 待.版本;
   const 当前 = 本插件版本(n);
   if (比较更新版本(目标版本, 当前) <= 0) {
-    await _(n, t, e, `目标版本 v${目标版本} 不高于当前版本 v${当前}；每次更新都必须升版本号。`);
+    await _(n, t, e, 反馈("版本检查未通过", [`目标版本 v${目标版本} 不高于当前版本 v${当前}；每次更新都必须升版本号。`]));
     return;
   }
   const 安装源 = 解析安装源目录(n);
   const 插件目录 = String(n.pluginPath || "").trim();
-  if (!插件目录 || !w.existsSync(插件目录)) { await _(n, t, e, "识别不到插件运行目录，已取消更新。"); return; }
-  if (!安装源) { await _(n, t, e, "识别不到安装源目录 plugins/GF-plugin-wenda，已取消更新：只写运行副本会被重载时的旧文件覆盖回去。"); return; }
-  await _(n, t, e, `⏳ 正在更新到 **v${目标版本}**，请稍候…`);
+  if (!插件目录 || !w.existsSync(插件目录)) { await _(n, t, e, 反馈("更新已取消", ["识别不到插件运行目录。"])); return; }
+  if (!安装源) { await _(n, t, e, 反馈("更新已取消", ["识别不到安装源目录 plugins/GF-plugin-wenda；只写运行副本会被重载时的旧文件覆盖回去。"])); return; }
+  await _(n, t, e, 反馈("正在更新", [`目标版本：**v${目标版本}**`, "下载、校验、备份需要一点时间，请稍候…"]));
   const 结果 = await 执行更新({
     插件目录, 安装源目录: 安装源, dataPath: n.dataPath, 目标版本,
     源键: 指定版本 ? 取更新源(读更新设置(n.dataPath).源).键 : (待?.源 || 取更新源(读更新设置(n.dataPath).源).键),
     允许无签名: 接受风险, 令牌: 读GitHub令牌(n),
   });
   if (!结果.ok) {
-    const 提示 = [
-      `❌ 更新失败（${结果.阶段}）`, "", 结果.原因 || "",
-      结果.需要风险确认 ? "\n如确认来源可信并愿意承担风险，请发「确认更新#风险」继续。" : "",
-    ].filter(Boolean).join("\n");
+    const 提示 = 反馈(`更新失败 · ${结果.阶段}`, [
+      结果.原因 || "",
+      结果.需要风险确认 ? "如确认来源可信并愿意承担风险，请发「确认更新#风险」继续。" : "",
+    ].filter(Boolean));
     await _(n, t, e, 提示, buildKeyboard([[kbBtn("qa_up_risk2", "承担风险更新", "确认更新#风险"), kbBtn("qa_up_cancel2", "取消更新", "取消更新", 0)]]));
     return;
   }
-  await _(n, t, e, [
-    `✅ **已更新到 v${结果.新版本}**`, "",
-    `旧版本：v${结果.旧版本 || "未知"}`,
+  await _(n, t, e, 反馈(`已更新到 v${结果.新版本}`, [
+    `旧版本：**v${结果.旧版本 || "未知"}**`,
     `下载源：${结果.下载源}`,
-    `🔒 ${签名摘要(结果.签名)}${结果.风险已确认 ? "（你已确认承担风险）" : ""}`,
-    `备份位置：插件目录同级的 .bak-* 目录`,
-    "", "插件将在 2.5 秒后自动重载。",
-  ].join("\n"));
+    `${签名摘要(结果.签名)}${结果.风险已确认 ? "（你已确认承担风险）" : ""}`,
+    "备份位置：插件目录同级的 .bak-* 目录",
+    "插件将在 2.5 秒后自动重载。",
+  ]));
   setTimeout(async () => {
     try {
       const pm = n.pluginManager;
@@ -1383,16 +1362,20 @@ async function 执行确认更新(n, e, t, 参数文本 = "") {
 async function 切换更新源(n, e, t, 参数 = "") {
   const 键 = String(参数 || "").trim().toLowerCase();
   if (键) {
-    if (!更新下载源表.some((x) => x.键 === 键)) { await _(n, t, e, "未知下载源。可选：direct / api / ghproxy / catmak"); return; }
+    if (!更新下载源表.some((x) => x.键 === 键)) { await _(n, t, e, 反馈("切换失败", ["未知下载源，可选：direct / api / ghproxy / catmak。"])); return; }
     写更新设置(n.dataPath, { 源: 键 });
-    await _(n, t, e, `✅ 下载源已切换为「${取更新源(键).名}」`);
+    await _(n, t, e, 反馈("下载源已切换", [`当前：**${取更新源(键).名}**（${键}）`]));
     return;
   }
   const 当前 = 取更新源(读更新设置(n.dataPath).源).键;
   await _(n, t, e, [
-    "🌐 **下载源**", "",
-    ...更新下载源表.map((x) => `${x.键 === 当前 ? "✅" : "·"} **${x.键}** — ${x.名}`),
-    "", "点击按钮直接切换；选好后发「问答检查更新」。",
+    大标题("下载源"),
+    "",
+    分区("可选源"),
+    灰块([
+      ...更新下载源表.map((x) => `${x.键 === 当前 ? "**当前**" : "·"} ${x.键} — ${x.名}`),
+      "点击按钮直接切换；选好后发「问答检查更新」。",
+    ]),
   ].join("\n"), buildKeyboard([更新下载源表.map((x) => kbBtn(`qa_src_${x.键}`, x.名, `问答更新源#${x.键}`))]));
 }
 
@@ -1416,7 +1399,7 @@ async function We(n, e, t) {
   if (CMD_UPDATE_CANCEL.test(r)) {
     if (!P(n, e)) return true;
     更新待确认.delete(更新键(n, e));
-    await _(n, t, e, "已取消本次更新待确认状态。");
+    await _(n, t, e, 反馈("已取消更新", ["待确认状态已清除。"]));
     return true;
   }
   if (CMD_UPDATE_SOURCE.test(r)) {
@@ -1426,71 +1409,70 @@ async function We(n, e, t) {
     return true;
   }
   if (CMD_VERSION.test(r)) {
-    await _(n, t, e, [
-      "**问答系统 · 版本信息**", "",
+    await _(n, t, e, 反馈("问答系统 · 版本信息", [
       `当前版本：**v${本插件版本(n)}**`,
       `仓库：https://github.com/${更新仓库}`,
       `发布页：https://github.com/${更新仓库}/releases`,
-      "", "主人发「问答检查更新」可检查最新版本。"
-    ].join("\n"));
+      "主人发「问答检查更新」可检查最新版本。",
+    ]));
     return true;
   }
 
   // ============ 主人管理指令 ============
   if (CMD_ADD_MASTER_EMPTY.test(r)) {
-    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能添加主人！"); return true; }
-    await _(n, t, e, "格式：`加主人+OpenID`（加号 / 空格 / # 可省略）\n例如：`加主人 6E0B188704AC0611617425B687DB9034`");
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, 反馈("权限不足", ["只有固定操作者才能添加主人。"])); return true; }
+    await _(n, t, e, 反馈("添加主人", ["格式：`加主人+OpenID`，加号 / 空格 / # 可省略。", "例：`加主人 6E0B188704AC0611617425B687DB9034`"]));
     return true;
   }
 
   if (CMD_DEL_MASTER_EMPTY.test(r)) {
-    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能删除主人！"); return true; }
-    await _(n, t, e, "格式：`删主人+OpenID`（加号 / 空格 / # 可省略）\n例如：`删主人 6E0B188704AC0611617425B687DB9034`");
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, 反馈("权限不足", ["只有固定操作者才能删除主人。"])); return true; }
+    await _(n, t, e, 反馈("删除主人", ["格式：`删主人+OpenID`，加号 / 空格 / # 可省略。", "例：`删主人 6E0B188704AC0611617425B687DB9034`"]));
     return true;
   }
 
   if (CMD_ADD_MASTER.test(r)) {
-    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能添加主人！"); return true; }
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, 反馈("权限不足", ["只有固定操作者才能添加主人。"])); return true; }
     const m = r.match(CMD_ADD_MASTER);
     const newOpenid = (m[1] || "").trim();
-    if (newOpenid.length < 8) { await _(n, t, e, "OpenID 长度异常，请重新检查后重试。"); return true; }
-    if (newOpenid === Tn(n)) { await _(n, t, e, "该 OpenID 已经是固定操作者本人，无需重复添加。"); return true; }
+    if (newOpenid.length < 8) { await _(n, t, e, 反馈("添加失败", ["OpenID 长度异常，请检查后重试。"])); return true; }
+    if (newOpenid === Tn(n)) { await _(n, t, e, 反馈("无需添加", ["该 OpenID 就是固定操作者本人。"])); return true; }
     const masters = getMasters(n);
-    if (masters.includes(newOpenid)) { await _(n, t, e, "该 OpenID 已在主人列表中。"); return true; }
+    if (masters.includes(newOpenid)) { await _(n, t, e, 反馈("无需添加", ["该 OpenID 已在主人列表中。"])); return true; }
     const ok = saveConfig(n, (config) => { if (!Array.isArray(config.masters)) config.masters = []; config.masters.push(newOpenid); });
-    if (!ok) { await _(n, t, e, "保存配置失败，请检查配置文件是否可写。"); return true; }
-    await _(n, t, e, `✅ 已添加主人：\`${newOpenid}\``);
+    if (!ok) { await _(n, t, e, 反馈("保存失败", ["请检查配置文件是否可写。"])); return true; }
+    await _(n, t, e, 反馈("已添加主人", [`\`${newOpenid}\``]));
     return true;
   }
 
   if (CMD_DEL_MASTER.test(r)) {
-    if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能删除主人！"); return true; }
+    if (!isOwnerOnly(n, e)) { await _(n, t, e, 反馈("权限不足", ["只有固定操作者才能删除主人。"])); return true; }
     const m = r.match(CMD_DEL_MASTER);
     const target = (m[1] || "").trim();
     const masters = getMasters(n);
-    if (!masters.includes(target)) { await _(n, t, e, "该 OpenID 不在主人列表中。"); return true; }
+    if (!masters.includes(target)) { await _(n, t, e, 反馈("移除失败", ["该 OpenID 不在主人列表中。"])); return true; }
     const ok = saveConfig(n, (config) => { config.masters = (config.masters || []).filter((x) => x !== target); });
-    if (!ok) { await _(n, t, e, "保存配置失败，请检查配置文件是否可写。"); return true; }
-    await _(n, t, e, `✅ 已移除主人：\`${target}\``);
+    if (!ok) { await _(n, t, e, 反馈("保存失败", ["请检查配置文件是否可写。"])); return true; }
+    await _(n, t, e, 反馈("已移除主人", [`\`${target}\``]));
     return true;
   }
 
   if (CMD_LIST_MASTER.test(r)) {
     if (!isOwnerOnly(n, e)) return true;
     const masters = getMasters(n);
-    if (!masters.length) { await _(n, t, e, `**主人列表**\n\n固定操作者：\`${Tn(n)}\`\n\n其他主人：（暂无）`); return true; }
+    if (!masters.length) { await _(n, t, e, 反馈("主人列表", [`固定操作者：\`${Tn(n)}\``, "其他主人：暂无"])); return true; }
     const list = masters.map((m, i) => `${i + 1}. \`${m}\``).join(`\n`);
-    await _(n, t, e, `**主人列表**\n\n固定操作者：\`${Tn(n)}\`\n\n其他主人（${masters.length} 位）：\n${list}`);
+    await _(n, t, e, 反馈("主人列表", [`固定操作者：\`${Tn(n)}\``, `其他主人（${masters.length} 位）：`, ...list.split("\n")]));
     return true;
   }
 
   if (CMD_CLEAR_MASTER.test(r)) {
     if (!isOwnerOnly(n, e)) return true;
     const masters = getMasters(n);
-    if (!masters.length) { await _(n, t, e, "主人列表已经为空。"); return true; }
+    if (!masters.length) { await _(n, t, e, 反馈("无需清空", ["主人列表已经为空。"])); return true; }
     const ok = saveConfig(n, (config) => { config.masters = []; });
-    if (!ok) { await _(n, t, e, "保存配置失败，请检查配置文件是否可写。"); return true; }
-    await _(n, t, e, "✅ 已清空所有主人（固定操作者保留）。");
+    if (!ok) { await _(n, t, e, 反馈("保存失败", ["请检查配置文件是否可写。"])); return true; }
+    await _(n, t, e, 反馈("已清空主人", ["其他主人已全部移除，固定操作者保留。"]));
     return true;
   }
   // ========================================================
@@ -1499,7 +1481,7 @@ async function We(n, e, t) {
     const openid = j(e);
     if (!openid) { await G(n, t, "无法获取你的 OpenID，请稍后再试。"); return true; }
     const cost = Date.now() - (e._startTime || Date.now());
-    const content = [`${ke(e)}`, `你的OpenID是: ${openid}`, `> 响应用时: ${cost}ms`].join("\n");
+    const content = `${ke(e)}\n${反馈("我的 OpenID", [`\`${openid}\``])}\n> 响应用时: ${cost}ms`;
     await G(n, t, content);
     return true;
   }
@@ -1508,8 +1490,8 @@ async function We(n, e, t) {
     if (!P(n, e)) return true;
     const cur = getAtReplySetting(n, { scope: "global" });
     const ok = saveConfig(n, (config) => { config.replyAtGlobal = !cur; });
-    if (!ok) { await _(n, t, e, "保存配置失败。"); return true; }
-    await _(n, t, e, `全局回复模式已切换为【${!cur ? "带艾特" : "纯文本"}】`);
+    if (!ok) { await _(n, t, e, 反馈("保存失败", ["请稍后重试或检查配置文件权限。"])); return true; }
+    await _(n, t, e, 反馈("全局回复模式已切换", [`当前：**${!cur ? "带艾特" : "纯文本"}**`]));
     return true;
   }
 
@@ -1517,8 +1499,8 @@ async function We(n, e, t) {
     if (t.scope !== "group" || !B(n, e)) return true;
     const cur = getAtReplySetting(n, t);
     const ok = setAtReplySetting(n, t, !cur);
-    if (!ok) { await _(n, t, e, "保存配置失败。"); return true; }
-    await _(n, t, e, `本群回复模式已切换为【${!cur ? "带艾特" : "纯文本"}】`);
+    if (!ok) { await _(n, t, e, 反馈("保存失败", ["请稍后重试或检查配置文件权限。"])); return true; }
+    await _(n, t, e, 反馈("本群回复模式已切换", [`当前：**${!cur ? "带艾特" : "纯文本"}**`]));
     return true;
   }
 
@@ -1526,8 +1508,8 @@ async function We(n, e, t) {
     if (!P(n, e)) return true;
     const cur = getAtReplySetting(n, { scope: "c2c" });
     const ok = setAtReplySetting(n, { scope: "c2c" }, !cur);
-    if (!ok) { await _(n, t, e, "保存配置失败。"); return true; }
-    await _(n, t, e, `私聊回复模式已切换为【${!cur ? "带艾特" : "纯文本"}】`);
+    if (!ok) { await _(n, t, e, 反馈("保存失败", ["请稍后重试或检查配置文件权限。"])); return true; }
+    await _(n, t, e, 反馈("私聊回复模式已切换", [`当前：**${!cur ? "带艾特" : "纯文本"}**`]));
     return true;
   }
 
@@ -1545,39 +1527,39 @@ async function We(n, e, t) {
     const isGroupAdmin = t.scope === "group" && B(n, e);
 
     if (section === "主人") {
-      if (!isOwnerOnly(n, e)) { await _(n, t, e, "只有固定操作者才能打开主人管理板块。"); return true; }
+      if (!isOwnerOnly(n, e)) { await _(n, t, e, 反馈("权限不足", ["只有固定操作者才能打开主人管理板块。"])); return true; }
       await _(n, t, e, CeMaster(n), KB_MASTER);
       return true;
     }
 
     if (section === "清空") {
-      if (!isOwner) { await _(n, t, e, "只有主人才能打开清空操作板块。"); return true; }
+      if (!isOwner) { await _(n, t, e, 反馈("权限不足", ["只有主人才能打开清空操作板块。"])); return true; }
       await _(n, t, e, CeClear(n), KB_CLEAR);
       return true;
     }
 
     if (section === "全局" || section === "私聊") {
-      if (!isOwner) { await _(n, t, e, `只有主人才能打开${section}问答板块。`); return true; }
+      if (!isOwner) { await _(n, t, e, 反馈("权限不足", [`只有主人才能打开${section}问答板块。`])); return true; }
       await _(n, t, e, section === "全局" ? CeGlobal(n) : CePrivate(n), section === "全局" ? KB_GLOBAL : KB_PRIVATE);
       return true;
     }
 
     if (section === "本群") {
-      if (t.scope !== "group") { await _(n, t, e, "本群问答板块仅支持在群聊中使用。"); return true; }
-      if (!B(n, e)) { await _(n, t, e, "你不是本群群主或管理员，无法打开本群问答板块。"); return true; }
+      if (t.scope !== "group") { await _(n, t, e, 反馈("范围限制", ["本群问答板块仅支持在群聊中使用。"])); return true; }
+      if (!B(n, e)) { await _(n, t, e, 反馈("权限不足", ["你不是本群群主或管理员，无法打开本群问答板块。"])); return true; }
       await _(n, t, e, CeGroup(n, t), KB_GROUP);
       return true;
     }
 
     if (section === "延时") {
-      if (t.scope !== "group") { await _(n, t, e, "延时问答板块仅支持在群聊中使用。"); return true; }
-      if (!B(n, e)) { await _(n, t, e, "你不是本群群主或管理员，无法打开延时问答板块。"); return true; }
+      if (t.scope !== "group") { await _(n, t, e, 反馈("范围限制", ["延时问答板块仅支持在群聊中使用。"])); return true; }
+      if (!B(n, e)) { await _(n, t, e, 反馈("权限不足", ["你不是本群群主或管理员，无法打开延时问答板块。"])); return true; }
       await _(n, t, e, CeDelay(n), KB_DELAY);
       return true;
     }
 
     if (section === "回复") {
-      if (!isOwner && !isGroupAdmin) { await _(n, t, e, "你没有权限打开回复模式板块。"); return true; }
+      if (!isOwner && !isGroupAdmin) { await _(n, t, e, 反馈("权限不足", ["你没有权限打开回复模式板块。"])); return true; }
       const cfg = getConfig(n);
       await _(n, t, e, CeReply({
         owner: isOwner,
@@ -1597,7 +1579,7 @@ async function We(n, e, t) {
     const isOwner = P(n, e);
     const isGroupAdmin = t.scope === "group" && B(n, e);
     if (!isOwner && !isGroupAdmin) {
-      await _(n, t, e, "你没有管理权限哦～\n如需查看问答使用说明，请发送：\n问答菜单");
+      await _(n, t, e, 反馈("权限不足", ["你没有管理权限。", "如需使用说明，请发「问答菜单」。"]));
       return true;
     }
     const cfg = getConfig(n);
@@ -1626,16 +1608,16 @@ async function We(n, e, t) {
     if (u === "本群") { if (t.scope !== "group" || !B(n, e)) return !0; }
     else if (!Y(n, e)) return !0;
     const f = Fe(String(i[2] || ""));
-    if (!f.ok) return await _(n, t, e, "撤回时间需为 **0–600** 的整数秒，未做保存。0 表示不撤回。"), !0;
+    if (!f.ok) return await _(n, t, e, 反馈("设置失败", ["撤回时间需为 **0–600** 的整数秒；0 表示不撤回。"])), !0;
     const p = u === "本群" ? S(e) || "unknown" : u;
-    return Dn(n, p, f.seconds), await _(n, t, e, f.seconds === 0 ? `已设置【${u}】答案撤回时间为 0 秒（不撤回）` : `已设置【${u}】答案撤回时间为 ${f.seconds} 秒`), !0;
+    return Dn(n, p, f.seconds), await _(n, t, e, 反馈("撤回时间已设置", [`范围：**${u}**`, `当前：**${f.seconds === 0 ? "不撤回" : f.seconds + " 秒"}**`])), !0;
   }
 
   const c = r.match(Ge);
   if (c) {
     if (!Y(n, e)) return !0;
     const u = c[1], f = zn(n, u);
-    return await _(n, t, e, [`已清空全部【${u}问答】`, "", "- 全局：已清空", "- 私聊：已清空", `- 群聊目录：${f} 个`].join(`\n`)), !0;
+    return await _(n, t, e, 反馈(`已清空全部${u}问答`, ["全局：已清空", "私聊：已清空", `群聊目录：${f} 个`])), !0;
   }
 
   const cMs = r.match(EeMs);
@@ -1645,9 +1627,9 @@ async function We(n, e, t) {
     if (t.scope !== "group") return true;
     if (op === "添加") {
       const parts = ans.split("#");
-      if (parts.length < 2) return await _(n, t, e, "添加延时毫秒问答格式：添加延时毫秒精准问答#问题#答案#毫秒数"), true;
+      if (parts.length < 2) return await _(n, t, e, 反馈("格式不正确", ["添加延时毫秒问答：`添加延时毫秒精准问答#问题#答案#毫秒数`"])), true;
       const realAns = parts[0], delayStr = parts[1], suffix = parts[2], delayNum = parseInt(delayStr, 10);
-      if (isNaN(delayNum) || delayNum < 1 || delayNum > 60000) return await _(n, t, e, "延迟时间需为1-60000毫秒整数！"), true;
+      if (isNaN(delayNum) || delayNum < 1 || delayNum > 60000) return await _(n, t, e, 反馈("格式不正确", ["延迟时间需为 **1–60000** 的整数毫秒。"])), true;
       let at; if (suffix === 'N@') at = false; else if (suffix === 'Y@') at = true;
       const g = S(e) || "unknown";
       return fnMs(n, e, t, "添加", type, g, q, realAns, delayNum, at);
@@ -1663,9 +1645,9 @@ async function We(n, e, t) {
     if (t.scope !== "group") return true;
     if (op === "添加") {
       const parts = ans.split("#");
-      if (parts.length < 2) return await _(n, t, e, "添加延时问答格式：添加延时精准问答#问题#答案#秒数"), true;
+      if (parts.length < 2) return await _(n, t, e, 反馈("格式不正确", ["添加延时问答：`添加延时精准问答#问题#答案#秒数`"])), true;
       const realAns = parts[0], delayStr = parts[1], suffix = parts[2], delayNum = parseInt(delayStr, 10);
-      if (isNaN(delayNum) || delayNum < 1 || delayNum > 60) return await _(n, t, e, "延迟时间需为1-60秒整数！"), true;
+      if (isNaN(delayNum) || delayNum < 1 || delayNum > 60) return await _(n, t, e, 反馈("格式不正确", ["延迟时间需为 **1–60** 的整数秒。"])), true;
       let at; if (suffix === 'N@') at = false; else if (suffix === 'Y@') at = true;
       const g = S(e) || "unknown";
       return fn(n, e, t, "添加", type, g, q, realAns, delayNum, at);
