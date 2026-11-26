@@ -1,14 +1,18 @@
 # 问答系统 · 使用说明（QQ 官方机器人）
 
-![版本](https://img.shields.io/badge/version-1.3.1-blue)
+![版本](https://img.shields.io/badge/version-1.3.2-blue)
 
-> 版本：**1.3.1**  
+> 版本：**1.3.2**  
 > 插件目录：`GF-plugin-wenda`  
 > 显示名：问答系统  
 > 原作者：三个句号，二改作者：天道化逍遥  
 > 本插件走 **kakake GF 官方车道**，对接 QQ 开放平台机器人，**不是** OneBot / NapCat 野生协议。
 
 ---
+
+## 📢 v1.3.2 更新日志
+
+- ✅ **更新备份不再写 data 目录**：改为插件目录同级的 `GF-plugin-wenda.bak-<时间戳>-<随机>`（星甲逻辑），保留最近 3 份；出错时可直接把备份目录改名回插件目录回退。
 
 ## 📢 v1.3.1 更新日志
 
@@ -25,7 +29,7 @@
   - 主人发 `问答检查更新` 或 `问答更新插件` 查看版本对比
   - 发 `确认更新` 二次确认后自动下载、校验、备份、覆盖、回读并重载
   - 发 `问答更新源#direct|api|ghproxy|catmak` 切换下载源
-  - 备份存 `data/<账号>/GF-plugin-wenda/update-backups`，保留最近 3 份
+  - 备份存插件目录同级的 `GF-plugin-wenda.bak-*`，保留最近 3 份（不写 data 目录）
 - ✅ **验证官方签名**
   - 更新前查 GitHub Release 对应 commit 的 `commit.verification`
   - 只有 `verified=true && reason=valid` 且作者为仓库主人 `3671656786` 才视为官方包

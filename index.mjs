@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.1";
+  return "1.3.2";
 }
 
 function getConfig(n) {
@@ -1368,7 +1368,7 @@ async function 执行确认更新(n, e, t, 参数文本 = "") {
     `旧版本：v${结果.旧版本 || "未知"}`,
     `下载源：${结果.下载源}`,
     `🔒 ${签名摘要(结果.签名)}${结果.风险已确认 ? "（你已确认承担风险）" : ""}`,
-    `备份位置：${n.dataPath}/update-backups`,
+    `备份位置：插件目录同级的 .bak-* 目录`,
     "", "插件将在 2.5 秒后自动重载。",
   ].join("\n"));
   setTimeout(async () => {
