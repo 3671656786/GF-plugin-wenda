@@ -1,8 +1,28 @@
 import ln from "node:crypto";
 import w from "node:fs";
 import d from "node:path";
+import {
+  仓库 as 更新仓库, 插件ID as 更新插件ID, 下载源表 as 更新下载源表,
+  取源 as 取更新源, 比较版本 as 比较更新版本, 查发布 as 查最新发布,
+  读更新配置 as 读更新设置, 写更新配置 as 写更新设置, 读包版本 as 读本地版本,
+  解析安装源目录, 执行更新, 当前版本 as 运行时版本
+} from "./lib/update.mjs";
+import { 注册网页后台 } from "./lib/web-console.mjs";
 
 function R(n) { return String(n ?? "").trim(); }
+
+// 版本号从磁盘 package.json 回读，避免硬编码常量报出编译时的旧版本
+function 本插件版本(n) {
+  try {
+    const dir = String(n?.pluginPath || "").trim();
+    if (dir) {
+      const v = R(JSON.parse(w.readFileSync(d.join(dir, "package.json"), "utf8")).version);
+      if (v) return v;
+    }
+  } catch {}
+  try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
+  return "1.3.0";
+}
 
 function getConfig(n) {
   const e = R(n.configPath);
@@ -884,6 +904,13 @@ function CeMain(n) {
   }
   if (n.group && n.manageGroup) O(e, [l("问答系统-延时", "⏱️ 延时问答")]);
   if (n.owner) O(e, [l("问答系统-清空", "🗑️ 清空操作")]);
+  if (n.owner) O(e, [
+    "",
+    "**🔄 版本与更新**",
+    l("问答检查更新", "检查最新版本（含官方签名）"),
+    l("问答版本", "查看当前版本"),
+    l("问答更新源", "切换下载源"),
+  ]);
 
   O(e, [
     "",
@@ -1107,6 +1134,14 @@ const CMD_DEL_MASTER_EMPTY = /^删主人[\s+#：:]*$/;
 const CMD_LIST_MASTER = /^查看主人列表$/;
 const CMD_CLEAR_MASTER = /^清空主人$/;
 
+// ============ 在线更新指令（仿星甲 / kzt） ============
+const CMD_UPDATE_CHECK = /^(?:问答)?(?:检查更新|更新插件)$/;
+const CMD_UPDATE_CONFIRM = /^(?:问答)?确认更新(?:#([\s\S]+))?$/;
+const CMD_UPDATE_CANCEL = /^(?:问答)?取消更新$/;
+const CMD_UPDATE_SOURCE = /^(?:问答)?更新源(?:#([\s\S]+))?$/;
+const CMD_VERSION = /^(?:问答)?版本(?:信息|查询)?$/;
+const 更新待确认 = new Map();
+
 function parseAtSuffix(str) {
   if (str.endsWith("#N@")) return { content: str.slice(0, -3), at: false };
   if (str.endsWith("#Y@")) return { content: str.slice(0, -3), at: true };
@@ -1252,9 +1287,154 @@ async function Qe(n, e, t, r, o) {
   return C ? `${M}\n***\n${C}` : M;
 }
 
+// ============ 在线更新：检查 / 确认 / 风险确认 / 下载源 ============
+function 签名摘要(签) {
+  if (!签) return "⚠️ 签名信息未获取";
+  return `${签.官方已验证 ? "✅ 官方签名已验证" : "⚠️ 官方签名未通过"}：${签.原因 || ""}`;
+}
+function 更新键(n, e) { return `${j(e) || "unknown"}@${e.scope || "c2c"}`; }
+
+async function 检查更新(n, e, t, 目标版本 = "") {
+  const 当前 = 本插件版本(n);
+  const 源 = 取更新源(读更新设置(n.dataPath).源);
+  const 查 = await 查最新发布(目标版本);
+  if (!查.ok) {
+    await _(n, t, e, [
+      "🔍 **检查更新失败**", "", 查.原因, "",
+      `当前版本：v${当前}`,
+      `发布页：https://github.com/${更新仓库}/releases`
+    ].join("\n"), buildKeyboard([[kbBtn("qa_up_retry", "重新检查", "问答检查更新"), kbBtn("qa_up_src", "切换下载源", "问答更新源")]]));
+    return;
+  }
+  const 比较 = 比较更新版本(查.版本, 当前);
+  const 签 = 查.签名;
+  更新待确认.set(更新键(n, e), { 版本: 查.版本, 源: 源.键, 到期: Date.now() + 10 * 60 * 1000 });
+  const 文本 = [
+    "🔄 **问答系统 · 在线更新**", "",
+    `当前版本：**v${当前}** → 最新版本：**v${查.版本}**`,
+    `状态：${比较 > 0 ? "🆕 发现新版本" : 比较 < 0 ? "⬇️ 目标是旧版本" : "✅ 已是最新版本"}`,
+    "",
+    `🔒 ${签名摘要(签)}`,
+    "",
+    `下载源：${源.名}`,
+    查.发布时间 ? `发布时间：${String(查.发布时间).slice(0, 10)}` : "",
+    查.资产大小 ? `包大小：${Math.round(查.资产大小 / 1024)} KB` : "",
+    "",
+    "⚠️ 更新会替换插件文件并自动重载，聊天会短暂中断，问答数据不会丢失。",
+    比较 > 0 || 比较 < 0 ? "确认无误请点【确认更新】；若签名未通过，会要求再次确认风险。" : "",
+  ].filter(Boolean).join("\n");
+  await _(n, t, e, 文本, buildKeyboard([
+    [kbBtn("qa_up_go", "确认更新", "确认更新"), kbBtn("qa_up_risk", "承担风险更新", "确认更新#风险")],
+    [kbBtn("qa_up_src", "切换下载源", "问答更新源"), kbBtn("qa_up_cancel", "取消更新", "取消更新", 0)],
+  ]));
+}
+
+async function 执行确认更新(n, e, t, 参数文本 = "") {
+  const 段 = String(参数文本 || "").split("#").map((x) => x.trim()).filter(Boolean);
+  const 接受风险 = 段.some((x) => /^风险$|风险确认|确认风险|acceptRisk/i.test(x));
+  const 指定版本 = 段.find((x) => /^v?\d+\.\d+\.\d+$/i.test(x))?.replace(/^v/i, "") || "";
+  const 待 = 更新待确认.get(更新键(n, e));
+  更新待确认.delete(更新键(n, e));
+  if (!指定版本 && (!待 || 待.到期 < Date.now())) {
+    await _(n, t, e, "请先发「问答检查更新」查看版本，再发「确认更新」。");
+    return;
+  }
+  const 目标版本 = 指定版本 || 待.版本;
+  const 当前 = 本插件版本(n);
+  if (比较更新版本(目标版本, 当前) <= 0) {
+    await _(n, t, e, `目标版本 v${目标版本} 不高于当前版本 v${当前}；每次更新都必须升版本号。`);
+    return;
+  }
+  const 安装源 = 解析安装源目录(n);
+  const 插件目录 = String(n.pluginPath || "").trim();
+  if (!插件目录 || !w.existsSync(插件目录)) { await _(n, t, e, "识别不到插件运行目录，已取消更新。"); return; }
+  if (!安装源) { await _(n, t, e, "识别不到安装源目录 plugins/GF-plugin-wenda，已取消更新：只写运行副本会被重载时的旧文件覆盖回去。"); return; }
+  await _(n, t, e, `⏳ 正在更新到 **v${目标版本}**，请稍候…`);
+  const 结果 = await 执行更新({
+    插件目录, 安装源目录: 安装源, dataPath: n.dataPath, 目标版本,
+    源键: 指定版本 ? 取更新源(读更新设置(n.dataPath).源).键 : (待?.源 || 取更新源(读更新设置(n.dataPath).源).键),
+    允许无签名: 接受风险,
+  });
+  if (!结果.ok) {
+    const 提示 = [
+      `❌ 更新失败（${结果.阶段}）`, "", 结果.原因 || "",
+      结果.需要风险确认 ? "\n如确认来源可信并愿意承担风险，请发「确认更新#风险」继续。" : "",
+    ].filter(Boolean).join("\n");
+    await _(n, t, e, 提示, buildKeyboard([[kbBtn("qa_up_risk2", "承担风险更新", "确认更新#风险"), kbBtn("qa_up_cancel2", "取消更新", "取消更新", 0)]]));
+    return;
+  }
+  await _(n, t, e, [
+    `✅ **已更新到 v${结果.新版本}**`, "",
+    `旧版本：v${结果.旧版本 || "未知"}`,
+    `下载源：${结果.下载源}`,
+    `🔒 ${签名摘要(结果.签名)}${结果.风险已确认 ? "（你已确认承担风险）" : ""}`,
+    `备份位置：${n.dataPath}/update-backups`,
+    "", "插件将在 2.5 秒后自动重载。",
+  ].join("\n"));
+  setTimeout(async () => {
+    try {
+      const pm = n.pluginManager;
+      if (pm && typeof pm.reloadPlugin === "function") await pm.reloadPlugin(更新插件ID);
+      else n.logger?.warn?.("[GF_qa] 宿主未提供 pluginManager.reloadPlugin，请手动重载插件");
+    } catch (err) { n.logger?.error?.("[GF_qa] 自更新后重载失败:", err); }
+  }, 2500);
+}
+
+async function 切换更新源(n, e, t, 参数 = "") {
+  const 键 = String(参数 || "").trim().toLowerCase();
+  if (键) {
+    if (!更新下载源表.some((x) => x.键 === 键)) { await _(n, t, e, "未知下载源。可选：direct / api / ghproxy / catmak"); return; }
+    写更新设置(n.dataPath, { 源: 键 });
+    await _(n, t, e, `✅ 下载源已切换为「${取更新源(键).名}」`);
+    return;
+  }
+  const 当前 = 取更新源(读更新设置(n.dataPath).源).键;
+  await _(n, t, e, [
+    "🌐 **下载源**", "",
+    ...更新下载源表.map((x) => `${x.键 === 当前 ? "✅" : "·"} **${x.键}** — ${x.名}`),
+    "", "点击按钮直接切换；选好后发「问答检查更新」。",
+  ].join("\n"), buildKeyboard([更新下载源表.map((x) => kbBtn(`qa_src_${x.键}`, x.名, `问答更新源#${x.键}`))]));
+}
+
 async function We(n, e, t) {
   const r = stripSlash(yn(e));
   if (!r) return !1;
+
+  // ============ 在线更新（仅主人） ============
+  if (CMD_UPDATE_CHECK.test(r)) {
+    if (!P(n, e)) return true;
+    const m = r.match(CMD_UPDATE_CHECK);
+    await 检查更新(n, e, t);
+    return true;
+  }
+  if (CMD_UPDATE_CONFIRM.test(r)) {
+    if (!P(n, e)) return true;
+    const m = r.match(CMD_UPDATE_CONFIRM);
+    await 执行确认更新(n, e, t, m[1] || "");
+    return true;
+  }
+  if (CMD_UPDATE_CANCEL.test(r)) {
+    if (!P(n, e)) return true;
+    更新待确认.delete(更新键(n, e));
+    await _(n, t, e, "已取消本次更新待确认状态。");
+    return true;
+  }
+  if (CMD_UPDATE_SOURCE.test(r)) {
+    if (!P(n, e)) return true;
+    const m = r.match(CMD_UPDATE_SOURCE);
+    await 切换更新源(n, e, t, m[1] || "");
+    return true;
+  }
+  if (CMD_VERSION.test(r)) {
+    await _(n, t, e, [
+      "**问答系统 · 版本信息**", "",
+      `当前版本：**v${本插件版本(n)}**`,
+      `仓库：https://github.com/${更新仓库}`,
+      `发布页：https://github.com/${更新仓库}/releases`,
+      "", "主人发「问答检查更新」可检查最新版本。"
+    ].join("\n"));
+    return true;
+  }
 
   // ============ 主人管理指令 ============
   if (CMD_ADD_MASTER_EMPTY.test(r)) {
@@ -1536,7 +1716,19 @@ const Ke = [
   { key: "replyAtPrivate", type: "boolean", label: "私聊回复带艾特", description: "私聊环境是否带艾特，默认开启", default: true }
 ], xe = Ke;
 
-async function ve(n) { n.logger?.info?.("[GF_qa] 官方问答插件已加载"); }
+async function ve(n) {
+  n.logger?.info?.(`[GF_qa] 官方问答插件已加载 v${本插件版本(n)}`);
+  try {
+    注册网页后台(n, {
+      当前版本: () => 本插件版本(n),
+      固定操作者: () => Tn(n),
+      主人列表: () => getMasters(n),
+      问答根: () => d.join(Q(n), J),
+      读问答: (scope, type) => A(k(n, scope, type)),
+      写问答: (scope, type, obj) => U(k(n, scope, type), obj),
+    });
+  } catch (err) { n.logger?.warn?.("[GF_qa] 网页控制台注册失败:", err?.message || err); }
+}
 
 async function nt(n) { he(), n.logger?.info?.("[GF_qa] 插件已卸载"); }
 
