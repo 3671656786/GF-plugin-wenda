@@ -7,7 +7,7 @@ import {
   读更新配置 as 读更新设置, 写更新配置 as 写更新设置, 读包版本 as 读本地版本,
   解析安装源目录, 执行更新, 当前版本 as 运行时版本
 } from "./lib/update.mjs";
-import { 注册网页后台 } from "./lib/web-console.mjs";
+import { 注册网页后台, 读GitHub令牌 } from "./lib/web-console.mjs";
 
 function R(n) { return String(n ?? "").trim(); }
 
@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.2";
+  return "1.3.3";
 }
 
 function getConfig(n) {
@@ -1297,7 +1297,7 @@ function 更新键(n, e) { return `${j(e) || "unknown"}@${e.scope || "c2c"}`; }
 async function 检查更新(n, e, t, 目标版本 = "") {
   const 当前 = 本插件版本(n);
   const 源 = 取更新源(读更新设置(n.dataPath).源);
-  const 查 = await 查最新发布(目标版本);
+  const 查 = await 查最新发布(目标版本, 读GitHub令牌(n));
   if (!查.ok) {
     await _(n, t, e, [
       "🔍 **检查更新失败**", "", 查.原因, "",
@@ -1353,7 +1353,7 @@ async function 执行确认更新(n, e, t, 参数文本 = "") {
   const 结果 = await 执行更新({
     插件目录, 安装源目录: 安装源, dataPath: n.dataPath, 目标版本,
     源键: 指定版本 ? 取更新源(读更新设置(n.dataPath).源).键 : (待?.源 || 取更新源(读更新设置(n.dataPath).源).键),
-    允许无签名: 接受风险,
+    允许无签名: 接受风险, 令牌: 读GitHub令牌(n),
   });
   if (!结果.ok) {
     const 提示 = [

@@ -43,9 +43,10 @@ function 注入样式() {
 .wd input,.wd select,.wd textarea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;background:#fff;color:var(--txt);font-family:inherit}
 .wd input:focus,.wd select:focus,.wd textarea:focus{outline:2px solid #14b8a644;border-color:var(--accent)}
 .wd textarea{width:100%;min-height:84px;resize:vertical}
-.wd .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
-.wd table{width:100%;border-collapse:collapse;font-size:12px}
-.wd th,.wd td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.wd .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff;max-height:calc(100vh - 330px)}
+.wd table{width:100%;min-width:760px;border-collapse:collapse;font-size:12px}
+.wd th,.wd td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;word-break:break-all}
+.wd td:first-child{max-width:190px}
 .wd th{background:#f8fafc;color:var(--sub);font-weight:600;position:sticky;top:0}
 .wd tr:last-child td{border-bottom:0}
 .wd .tag{padding:1px 7px;border-radius:6px;background:#eef2f7;color:var(--sub);font-size:11px}
@@ -80,6 +81,7 @@ export default function WendaConsole(props) {
   const [旧密码, set旧密码] = useState('');
   const [新密码, set新密码] = useState('');
   const [错误, set错误] = useState('');
+  const [更新错误, set更新错误] = useState('');
   const [提示, set提示] = useState('');
   const [忙, set忙] = useState(false);
   const [页签, set页签] = useState('overview');
@@ -93,6 +95,10 @@ export default function WendaConsole(props) {
   const [更新态, set更新态] = useState(null);
   const [检查结果, set检查结果] = useState(null);
   const [接受风险, set接受风险] = useState(false);
+  const [令牌输入, set令牌输入] = useState('');
+  const [令牌信息, set令牌信息] = useState({ 已设置: false, 掩码: '' });
+  const [显示令牌, set显示令牌] = useState(false);
+  const [额度, set额度] = useState(null);
 
   const api = useCallback(async (路径, 方法 = 'GET', body = undefined) => {
     const headers = { 'Content-Type': 'application/json' };
@@ -140,11 +146,16 @@ export default function WendaConsole(props) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (已登录) 刷新(); }, [页签, 范围, 刷新]);
+  useEffect(() => { if (已登录 && 页签 === 'security') 载入令牌信息(); }, [已登录, 页签]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function 执行(fn, 成功提示 = '') {
-    set忙(true); set错误(''); set提示('');
+  async function 执行(fn, 成功提示 = '', 分类 = '') {
+    set忙(true); set提示('');
+    if (分类 === 'update') set更新错误(''); else set错误('');
     try { await fn(); if (成功提示) set提示(成功提示); }
-    catch (e) { set错误(e.message || String(e)); }
+    catch (e) {
+      const 文 = e.message || String(e);
+      if (分类 === 'update') set更新错误(文); else set错误(文);
+    }
     finally { set忙(false); }
   }
 
@@ -163,11 +174,38 @@ export default function WendaConsole(props) {
     }, '密码已修改');
   }
 
+  async function 载入令牌信息() {
+    await 执行(async () => {
+      const [t, q] = await Promise.all([
+        api('/settings/token'),
+        api('/settings/rate-limit').catch(() => null),
+      ]);
+      set令牌信息(t); set额度(q);
+      set令牌输入(''); set显示令牌(false);
+    });
+  }
+
+  async function 保存令牌() {
+    await 执行(async () => {
+      const d = await api('/settings/token', 'POST', { token: 令牌输入 });
+      set令牌信息(d); set令牌输入(''); set显示令牌(false);
+      set额度(await api('/settings/rate-limit').catch(() => null));
+    }, 令牌输入 ? 'Token 已保存，更新请求将使用认证额度' : '已清除 Token');
+  }
+
+  async function 切换令牌显示() {
+    if (显示令牌) { set显示令牌(false); set令牌输入(''); return; }
+    await 执行(async () => {
+      const d = await api('/settings/token?reveal=1');
+      set令牌输入(d.token || ''); set显示令牌(true);
+    });
+  }
+
   async function 检查更新() {
     await 执行(async () => {
       const d = await api('/update/check', 'POST', {});
-      set检查结果(d); set接受风险(false);
-    }, '检查完成');
+      set检查结果(d); set接受风险(false); set更新错误('');
+    }, '检查完成', 'update');
   }
 
   async function 安装更新() {
@@ -179,7 +217,7 @@ export default function WendaConsole(props) {
       set更新态(await api('/update/status'));
       setTimeout(() => api('/update/status').then(set更新态).catch(() => {}), 3000);
       set提示(`已更新到 v${d.新版本}，正在重载插件`);
-    });
+    }, '', 'update');
   }
 
   async function 保存问答() {
@@ -244,7 +282,9 @@ export default function WendaConsole(props) {
         h('button', { key: k, className: `tab ${页签 === k ? 'on' : ''}`, onClick: () => set页签(k) }, n))
     ),
     h('div', { className: 'wrap' },
-      错误 ? h('div', { className: 'card err', style: { marginBottom: 12 } }, 错误) : null,
+      // 更新相关错误只显示在「在线更新」页签，避免误报串到问答管理页
+      错误 && 页签 !== 'update' ? h('div', { className: 'card err', style: { marginBottom: 12 } }, 错误) : null,
+      更新错误 && 页签 === 'update' ? h('div', { className: 'card err', style: { marginBottom: 12 } }, 更新错误) : null,
       提示 ? h('div', { className: 'card ok', style: { marginBottom: 12 } }, String(提示)) : null,
 
       页签 === 'overview' ? h('div', { className: 'grid cols4' }, [
@@ -314,7 +354,12 @@ export default function WendaConsole(props) {
           ),
           h('div', { className: 'row', style: { marginTop: 10 } },
             h('button', { className: 'btn primary', disabled: 忙, onClick: 检查更新 }, 忙 ? '检查中…' : '🔍 检查更新'),
-            h('button', { className: 'btn', disabled: 忙 || !检查结果, onClick: 安装更新 }, '⬆️ 安装更新'),
+            h('button', {
+              className: 'btn',
+              disabled: 忙 || !检查结果 || 检查结果.有更新 !== true,
+              title: 检查结果 && !检查结果.有更新 ? '当前已是最新版本，无需安装' : '',
+              onClick: 安装更新,
+            }, '⬆️ 安装更新'),
           ),
           h('div', { className: 'note', style: { marginTop: 10 } },
             `状态：${(更新态 && 更新态.阶段) || '未开始'}　${(更新态 && 更新态.进行中) ? '（进行中）' : ''}　${(更新态 && 更新态.错误) || ''}`),
@@ -354,6 +399,26 @@ export default function WendaConsole(props) {
       ]) : null,
 
       页签 === 'security' ? h('div', { className: 'grid cols2' }, [
+        h('div', { className: 'card', style: { gridColumn: '1/-1' } },
+          h('div', { className: 'row', style: { justifyContent: 'space-between' } },
+            h('h3', { style: { margin: 0 } }, '🔑 GitHub API Token'),
+            h('div', { className: 'row' },
+              h('span', { className: 'tag' }, `核心 ${额度 ? 额度.核心剩余 : '—'}/${额度 ? 额度.核心上限 : '—'}`),
+              h('span', { className: 'tag' }, `搜索 ${额度 ? 额度.搜索剩余 : '—'}/${额度 ? 额度.搜索上限 : '—'}`))),
+          h('div', { className: 'row', style: { marginTop: 10 } },
+            h('input', {
+              className: 'grow',
+              type: 显示令牌 ? 'text' : 'password',
+              value: 令牌输入,
+              placeholder: 令牌信息.掩码 || '粘贴 GitHub Token（留空并保存可清除）',
+              onChange: e => set令牌输入(e.target.value),
+            }),
+            h('button', { className: 'btn', title: 显示令牌 ? '隐藏' : '显示当前 Token', onClick: 切换令牌显示 }, 显示令牌 ? '🙈' : '👁'),
+            h('button', { className: 'btn primary', disabled: 忙, onClick: 保存令牌 }, '保存')),
+          h('p', { className: 'k', style: { marginTop: 8 } },
+            '填 Token 后更新检查走认证额度（核心 5000 次/小时），不再受未认证 60 次/小时限制。'),
+          h('a', { href: 'https://github.com/settings/tokens', target: '_blank', rel: 'noreferrer', className: 'k' },
+            '去 github.com/settings/tokens 新建 Token（需 public_repo / Read-only 权限）')),
         h('div', { className: 'card' },
           h('h3', null, '修改控制台密码'),
           h('label', null, '原密码'), h('input', { type: 'password', value: 旧密码, style: { width: '100%' }, onChange: e => set旧密码(e.target.value) }),
