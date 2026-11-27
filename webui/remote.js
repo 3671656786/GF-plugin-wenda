@@ -83,8 +83,62 @@ const CSS = `.qa-admin{--ink:#0b1220;--text:#0f172a;--heading:#1e293b;--muted:#6
 .qa-admin .login-card p{margin:0 0 18px;font-size:12px;color:var(--muted)}
 .qa-admin .login-card input{width:100%;margin-bottom:12px}
 .qa-admin .login-card .btn{width:100%}
-@media(max-width:980px){.qa-admin .stats{grid-template-columns:repeat(2,1fr)}.qa-admin .split{grid-template-columns:1fr}}
-@media(max-width:820px){.qa-admin{flex-direction:column;max-height:none}.qa-admin .sidebar{display:none}.qa-admin .main{padding:14px 12px calc(var(--mobile-nav-h) + var(--safe-bottom) + 1.75rem)}.qa-admin .mobile-tabbar{position:fixed;left:1rem;right:1rem;bottom:calc(.75rem + var(--safe-bottom));z-index:40;display:flex;border-radius:1.25rem;padding:.45rem;gap:.25rem;justify-content:space-around;background:#ffffff47;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.42);box-shadow:0 16px 40px #0f172a29}.qa-admin .mobile-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid transparent;background:transparent;border-radius:.9rem;padding:.55rem .35rem;font:inherit;font-size:10px;font-weight:600;color:#64748b;cursor:pointer}.qa-admin .mobile-tab.active{color:#0f766e;background:#14b8a633;border-color:#2dd4bf66}.qa-admin .tablewrap{max-height:none}}
+/* ============ 响应式：大屏 / 平板横竖屏 / 手机 ============
+   >1280 桌面：4 列统计 + 双列面板 + 220px 侧栏
+   821–1280 平板横屏 / 小笔记本：2 列统计 + 双列面板（窄时单列）
+   601–820 平板竖屏 / 大屏手机：侧栏收起为底部 TabBar + 2 列统计 + 表格卡片
+   <=600 手机：单列统计 + 卡片表单 + 16px 输入防 iOS 缩放
+*/
+@media(max-width:1280px){.qa-admin .stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1080px){.qa-admin .split{grid-template-columns:minmax(0,1fr)}.qa-admin .main{padding:16px 16px 24px}}
+@media(max-width:820px){
+  .qa-admin{flex-direction:column;height:auto;min-height:100vh;max-height:none;overflow:visible}
+  .qa-admin .sidebar{display:none}
+  .qa-admin .main{overflow:visible;padding:14px 12px calc(var(--mobile-nav-h) + var(--safe-bottom) + 1.75rem)}
+  .qa-admin .page-title{font-size:1.2rem}
+  .qa-admin .mobile-tabbar{position:fixed;left:1rem;right:1rem;bottom:calc(.75rem + var(--safe-bottom));z-index:40;display:flex;border-radius:1.25rem;padding:.45rem;gap:.25rem;justify-content:space-around;background:#ffffff47;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.42);box-shadow:0 16px 40px #0f172a29}
+  .qa-admin .mobile-tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:1px solid transparent;background:transparent;border-radius:.9rem;padding:.6rem .25rem;min-height:44px;font:inherit;font-size:10px;font-weight:600;color:#64748b;cursor:pointer}
+  .qa-admin .mobile-tab.active{color:#0f766e;background:#14b8a633;border-color:#2dd4bf66}
+  .qa-admin input,.qa-admin select,.qa-admin textarea{font-size:16px;min-height:44px;padding:9px 10px}
+  .qa-admin .btn{min-height:44px;padding:10px 14px}
+  .qa-admin .toolbar{gap:8px;padding:10px}
+  .qa-admin .toolbar label{flex:1 1 45%;min-width:0;justify-content:space-between}
+  .qa-admin .toolbar label select,.qa-admin .toolbar label input{min-width:0;max-width:100%;flex:1}
+  .qa-admin .search{flex:1 1 100%;min-width:0;width:100%}
+  .qa-admin .row{flex-wrap:wrap}
+  .qa-admin .tablewrap{max-height:none;overflow:visible;border:0;background:transparent}
+  /* 表格转卡片：隐藏表头，每个 tr 成一张玻璃卡，td 用 data-label 显示字段名 */
+  .qa-admin table,.qa-admin tbody,.qa-admin tr,.qa-admin td{display:block;width:100%;min-width:0}
+  .qa-admin thead{display:none}
+  .qa-admin tr{background:#ffffff47;border:1px solid rgba(255,255,255,.42);border-radius:12px;margin-bottom:10px;padding:10px 12px;box-shadow:0 4px 14px #94a3b81a}
+  .qa-admin td{border:0;padding:5px 0;display:flex;gap:8px;align-items:flex-start;text-align:left}
+  .qa-admin td::before{content:attr(data-label);flex:0 0 44px;color:#64748b;font-size:12px;font-weight:600}
+  .qa-admin td.empty{display:block;text-align:center;padding:20px 0}
+  .qa-admin td.empty::before{content:none}
+  .qa-admin .modal{padding:16px;max-height:90vh;width:96vw}
+  .qa-admin .modal .row>label,.qa-admin .modal .row>input,.qa-admin .modal .row>select{flex:1 1 100%}
+  .qa-admin .toast{font-size:14px;max-width:92vw}
+  .qa-login-root .login-wrap{min-height:100vh;align-items:center}
+}
+@media(max-width:600px){
+  .qa-admin .stats{grid-template-columns:minmax(0,1fr)}
+  .qa-admin .stat-card .value{font-size:1.35rem}
+  .qa-admin .panel{padding:14px}
+  .qa-admin .toolbar label{flex:1 1 100%}
+  .qa-admin .page-title{font-size:1.1rem}
+  .qa-admin .page-sub{font-size:11px}
+  .qa-admin .quote{font-size:11px;padding:7px 9px}
+  .qa-admin table,.qa-admin tbody,.qa-admin tr,.qa-admin td{display:block;width:100%;min-width:0}
+  .qa-admin td::before{flex:0 0 52px}
+  .qa-admin .mobile-tabbar{left:.5rem;right:.5rem}
+  .qa-admin .mobile-tab{font-size:9px}
+}
+/* 横屏矮屏：TabBar 不遮挡内容 */
+@media(max-height:520px) and (max-width:820px){
+  .qa-admin .mobile-tabbar{padding:.25rem;bottom:.35rem}
+  .qa-admin .mobile-tab{padding:.35rem .2rem;min-height:38px}
+  .qa-admin .main{padding-left:16px;padding-right:16px}
+}
 .qa-login-root{display:flex;min-height:100vh;color:var(--text,#0f172a);font-family:"Manrope","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(900px 520px at 8% -6%,rgba(45,212,191,.28),transparent 55%),linear-gradient(155deg,#e0f2fe,#ecfeff 42%,#e0f7f4)}`;
 
 function 注入样式() {
@@ -301,7 +355,7 @@ export default function WendaConsole(props) {
   if (!已登录) {
     return h('div', { className: 'qa-login-root' },
       h('style', null, CSS),
-      h('div', { className: 'qa-admin login-wrap', style: { display: 'flex', alignItems: 'center' } },
+      h('div', { className: 'qa-admin login-wrap', style: { display: 'flex', alignItems: 'center', minHeight: '100vh' } },
         h('div', { className: 'login-card' },
           h('h2', null, '💬 问答系统 · 控制台'),
           h('p', null, `初始密码 ${默认密码 ? '12345678' : '已修改'}，登录后请尽快更新。`),
@@ -360,13 +414,13 @@ export default function WendaConsole(props) {
           h('tbody', null, 条目.length === 0
             ? h('tr', null, h('td', { colSpan: 7, className: 'empty' }, '暂无数据，点右上角「新增问答」开始'))
             : 条目.map(x => h('tr', { key: `${x._scope}|${x._type}|${x.question}` },
-              h('td', null, h('span', { className: `chip ${x._scope === '全局' ? 'group' : 'priv'}` }, x._scope)),
-              h('td', null, x._type),
-              h('td', null, x.question),
-              h('td', null, x.answer.length > 100 ? x.answer.slice(0, 100) + '…' : x.answer),
-              h('td', null, x.delay || '—'),
-              h('td', null, x.at === undefined ? '默认' : (x.at ? '艾特' : '纯文本')),
-              h('td', null, h('div', { className: 'row', style: { marginTop: 0 } },
+              h('td', { 'data-label': '范围' }, h('span', { className: `chip ${x._scope === '全局' ? 'group' : 'priv'}` }, x._scope)),
+              h('td', { 'data-label': '类型' }, x._type),
+              h('td', { 'data-label': '问题' }, x.question),
+              h('td', { 'data-label': '答案' }, x.answer.length > 100 ? x.answer.slice(0, 100) + '…' : x.answer),
+              h('td', { 'data-label': '延迟' }, x.delay || '—'),
+              h('td', { 'data-label': '艾特' }, x.at === undefined ? '默认' : (x.at ? '艾特' : '纯文本')),
+              h('td', { 'data-label': '操作' }, h('div', { className: 'row', style: { marginTop: 0 } },
                 h('button', { className: 'btn btn-ghost', onClick: () => set编辑({ scope: x._scope, type: x._type, question: x.question, answer: x.answer, delay: x.delay, at: x.at === undefined ? '' : (x.at ? '1' : '0'), _old: x.question }) }, '编辑'),
                 h('button', { className: 'btn btn-danger', onClick: () => 删除问答(x) }, '删除')
               ))
@@ -444,7 +498,7 @@ export default function WendaConsole(props) {
           h('span', { className: 'chip priv' }, `搜索 ${额度 ? 额度.搜索剩余 : '—'}/${额度 ? 额度.搜索上限 : '—'}`),
           h('span', { className: `chip ${令牌信息.已设置 ? 'ok' : 'warn'}` }, 令牌信息.已设置 ? '已设置' : '未设置')),
         h('div', { className: 'row' },
-          h('input', { className: 'grow', type: 显示令牌 ? 'text' : 'password', value: 令牌输入, placeholder: 令牌信息.掩码 || '粘贴 GitHub Token（留空保存可清除）', onChange: e => set令牌输入(e.target.value), style: { flex: 1 } }),
+          h('input', { className: 'grow', type: 显示令牌 ? 'text' : 'password', value: 令牌输入, placeholder: 令牌信息.掩码 || '粘贴 GitHub Token（留空保存可清除）', onChange: e => set令牌输入(e.target.value), style: { flex: '1 1 100%', minWidth: 0 } }),
           h('button', { className: 'btn btn-ghost', title: 显示令牌 ? '隐藏' : '显示', onClick: 切换令牌显示 }, 显示令牌 ? '🙈' : '👁'),
           h('button', { className: 'btn btn-solid', disabled: 忙, onClick: 保存令牌 }, '保存')
         ),
