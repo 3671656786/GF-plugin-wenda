@@ -1,5 +1,14 @@
 # 更新日志
 
+## v1.3.6
+
+- **答案支持艾特被艾特用户**：添加问答时从 `event.mentions[]`（官方字段，群聊用 `member_openid`）读取被 @ 用户，openid 随答案存入元数据；回复时按官方 `<qqbot-at-user id="" />` 语法生成艾特（旧 `<@userid>` 已弃用）。
+  - 纯文本答案：只艾特被艾特用户。
+  - 非纯文本答案（含图片）：同时艾特触发者与被艾特用户（共 2 人）。
+- **空格保留**：答案不再被 `trim()` 吃掉首尾空格，内部空格原样入库与回复；只有 @用户标记时不再误报「答案不能为空」。
+- **回复耗时**：按星甲 v3.3.24 口径，在「响应用时」下方新增「回复耗时」（QQ 消息发送 → 完成回复），两行同为灰色引用块，超 60 秒不显示，拿不到时间戳时自动兜底。原「响应用时」口径不变。
+- 依据官方文档：bot.qq.com/wiki/develop/api-v2/autogen/event/group_at_message_create.html（mentions 字段）、bot.qq.com/wiki/develop/api-v2/server-inter/message/trans/text-chain.html（艾特语法）。
+
 ## v1.3.5
 
 - **控制台按 kzt / 星甲设计系统重做**：青绿渐变毛玻璃背景、220px 侧边栏 + 主内容区、顶部 Toast、移动端底部 TabBar。
