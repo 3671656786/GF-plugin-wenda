@@ -2,7 +2,7 @@
   "name": "GF-plugin-wenda",
   "displayName": "问答系统",
   "author": "天道化逍遥",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "entry": "index.mjs",
   "description": "QQ 官方机器人问答：本群 / 全局 / 私聊，精准与模糊；答案支持文字与图片；指令支持 / 前缀；网页控制台管理问答、在线更新并验证官方签名"
 }

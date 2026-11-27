@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.6";
+  return "1.3.7";
 }
 
 function getConfig(n) {
@@ -1778,16 +1778,16 @@ async function Ye(n, e, t) {
   if (!r) return !1;
   const o = t.scope === "group" ? S(e) || "unknown" : "私聊", i = Ee(n, r, o);
   if (i == null) return !1;
+  // 回复模式（截图里的「纯文本 / 带艾特」）：单条答案后缀 > 范围模式 > 全局模式
   const atReply = i.at !== undefined ? i.at : getAtReplySetting(n, t);
   const 被艾特 = R(i.mention);
-  const 纯文本 = !v(i.answer).some((x) => x.kind === "img");
 
   let prefix = "";
   if (被艾特) {
-    // 答案中带被艾特用户：
-    //  · 纯文本答案 → 只艾特被艾特者
-    //  · 非纯文本（含图片）→ 同时艾特触发者 + 被艾特者（共 2 人）
-    prefix = 纯文本 ? 艾特标签(被艾特) : `${ke(e)} ${艾特标签(被艾特)}`.trim();
+    // 答案中带被艾特用户时：
+    //  · 回复模式=纯文本 → 只艾特答案里的那个人
+    //  · 回复模式=带艾特（非纯文本）→ 同时艾特触发者 + 答案里的那个人（共 2 人）
+    prefix = atReply ? `${ke(e)} ${艾特标签(被艾特)}`.trim() : 艾特标签(被艾特);
   } else if (atReply) {
     prefix = `${ke(e)}`;
   }
