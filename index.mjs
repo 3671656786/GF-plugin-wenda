@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.5";
+  return "1.3.6";
 }
 
 function getConfig(n) {
@@ -366,16 +366,111 @@ async function wn(n) {
 
 function h(n) { return String(n ?? "").trim(); }
 
+/* ============================================================
+ * 耗时后缀（仿 GF-plugin-xjyl v3.3.24 实现，保持统计口径一致）
+ *   响应用时 = 服务器处理用时（收到事件 → 完成回复），原口径不变
+ *   回复耗时 = 端到端延时（QQ 消息发送 → 完成回复），含网络 + 排队
+ * 起点登记见 标记请求开始()；两行均为灰色引用块，超 60 秒不显示。
+ * ============================================================ */
+let 本次请求开始 = 0;
+let 本次消息发送 = 0;
+
+function 标记请求开始(event) {
+  const now = Date.now();
+  本次请求开始 = now;
+  本次消息发送 = 0;
+  try {
+    const d = (event && event.d) || {};
+    const data = (event && event.data) || {};
+    const 候选 = [event && event.timestamp, d.timestamp, data.timestamp];
+    for (const v of 候选) {
+      if (v === undefined || v === null || v === "") continue;
+      let ms = 0;
+      if (typeof v === "number" || /^\d+$/.test(String(v))) {
+        const ts = Number(v);
+        if (!Number.isFinite(ts) || ts <= 0) continue;
+        ms = ts < 1e12 ? ts * 1000 : ts; // 秒 → 毫秒
+      } else {
+        const parsed = Date.parse(String(v));
+        if (Number.isFinite(parsed)) ms = parsed;
+      }
+      // 只接受「距今 0 ~ 5 分钟」的时间，未来/过旧一律忽略
+      if (ms && ms <= now + 2000 && now - ms <= 5 * 60 * 1000) { 本次消息发送 = ms; break; }
+    }
+  } catch { /* 解析异常 → 走兜底 */ }
+  if (!本次消息发送) 本次消息发送 = 本次请求开始;
+}
+
+function 合法耗时(起点) {
+  if (!起点) return null;
+  const 差 = Date.now() - 起点;
+  return Number.isFinite(差) && 差 >= 0 && 差 <= 60000 ? 差 : null;
+}
+
+function 耗时后缀() {
+  const 用 = 合法耗时(本次请求开始);
+  let 回 = 合法耗时(本次消息发送);
+  if (回 === null && 用 !== null) 回 = 用;
+  let s = "";
+  if (用 !== null) s += "\n\n> 响应用时: " + 用 + "ms";
+  if (回 !== null) s += "\n> 回复耗时: " + 回 + "ms";
+  return s;
+}
+
 const _n = /<@!?([A-Za-z0-9_]+)>/g;
 
 function xn(n) { return n.replace(_n, "").replace(/\s+/g, " ").trim(); }
 
-function yn(n) { return String(n.content ?? "").replace(_n, "").replace(/^\s+/, "").replace(/\s+$/, ""); }
+/* 官方（bot.qq.com/.../text-chain.html）：@用户新语法 <qqbot-at-user id="" />，
+   旧语法 <@userid> 标注「即将弃用」。两条都兼容生成。 */
+function 艾特标签(openid) {
+  const id = R(openid);
+  return id ? `<qqbot-at-user id="${id}" />` : "";
+}
+
+/** 只剥掉消息开头的「@机器人」标记（官方：content 已去除机器人前缀，兼容个别宿主未去除）；
+ *  正文里的 @其他用户标记保留，交给答案解析处理。首尾只去换行/制表，不压缩内部空格。 */
+const 开头机器人艾特 = /^(?:<qqbot-at-user[^>]*>|<@!?[A-Za-z0-9_-]+>)[\s\u3000]*/i;
+function yn(n) {
+  return String(n.content ?? "")
+    .replace(开头机器人艾特, "")
+    .replace(/^[\r\n]+|[\r\n]+$/g, "");
+}
+
+/** 从 event.mentions[] 取被艾特者 OpenID（官方字段：群聊用 member_openid，不含机器人自身）；
+ *  宿主未透传 mentions 时，退回解析正文里的艾特标记。 */
+function 取被艾特者(n) {
+  const 列 = Array.isArray(n?.mentions) ? n.mentions : [];
+  const 结果 = [];
+  for (const m of 列) {
+    if (!m || m.bot === true || m.is_you === true) continue;
+    const id = R(m.member_openid || m.user_openid || m.id || m.union_openid);
+    if (id && !结果.includes(id)) 结果.push(id);
+  }
+  if (!结果.length) {
+    const 正文 = String(n?.content ?? "");
+    const 标记 = 正文.match(/<qqbot-at-user[^>]*id=["']([^"']+)["'][^>]*>/gi) || [];
+    const 旧标 = 正文.match(/<@!?([A-Za-z0-9_-]+)>/g) || [];
+    for (const x of [...标记, ...旧标]) {
+      const id = R((x.match(/id=["']([^"']+)["']/i) || [])[1] || x.replace(/<@!?|>/g, ""));
+      if (id && !结果.includes(id)) 结果.push(id);
+    }
+  }
+  return 结果;
+}
+
+/** 剥掉答案正文里的官方艾特标记，其余字符（含内部空格）原样保留 */
+function 剥艾特标记(文) {
+  return String(文 ?? "")
+    .replace(/<qqbot-at-user[^>]*>/gi, "")
+    .replace(/<@!?[A-Za-z0-9_-]+>/g, "");
+}
 
 function vn(n) { return xn(String(n.content ?? "")); }
 
 // 指令前缀兼容：允许用 / 或 ／ 开头，例如 /问答系统、/添加精准问答#你好#你好呀
-function stripSlash(n) { return String(n ?? "").replace(/^[\s\/／]+/, "").trim(); }
+// 只去掉开头的 / 与空白，保留答案尾部的空格（原实现 .trim() 会把「#答案 」的尾部空格吃掉）
+function stripSlash(n) { return String(n ?? "").replace(/^[\s\/／]+/, "").replace(/[\r\n]+$/g, ""); }
 
 function ne(n) {
   const e = h(n.t);
@@ -679,23 +774,27 @@ async function Se(n, e) {
 function parseStoredEntry(raw) {
   if (raw == null) return null;
   let at = undefined;
+  let mention = "";
   let content = String(raw);
+  // \u0002mention=<openid>：记录添加这条问答时被 @ 的用户，回复时据此生成艾特
+  const mIdx = content.lastIndexOf('\u0002mention=');
+  if (mIdx >= 0) { mention = content.slice(mIdx + 9); content = content.slice(0, mIdx); }
   const atIdx = content.lastIndexOf('\u0001at=');
   if (atIdx >= 0) { const flag = content.slice(atIdx + 4); at = flag === '1'; content = content.slice(0, atIdx); }
   const parts = content.split('\u0000');
   const answer = parts[0] || '';
   const delay = parseInt(parts[1] || '0', 10) || 0;
-  return { answer, delay, at };
+  return { answer, delay, at, mention };
 }
 
 function $e(n, e) {
   if (!e) return null;
-  if (n.精准[e]) { const p = parseStoredEntry(n.精准[e]); return { type: "精准", answer: p.answer, delay: 0, at: p.at }; }
-  for (const t of Object.keys(n.模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.模糊[t]); return { type: "模糊", answer: p.answer, delay: 0, at: p.at }; }
-  if (n.延时精准[e]) { const p = parseStoredEntry(n.延时精准[e]); return { type: "延时精准", answer: p.answer, delay: p.delay * 1000, at: p.at }; }
-  for (const t of Object.keys(n.延时模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.延时模糊[t]); return { type: "延时模糊", answer: p.answer, delay: p.delay * 1000, at: p.at }; }
-  if (n.延时毫秒精准[e]) { const p = parseStoredEntry(n.延时毫秒精准[e]); return { type: "延时毫秒精准", answer: p.answer, delay: p.delay, at: p.at }; }
-  for (const t of Object.keys(n.延时毫秒模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.延时毫秒模糊[t]); return { type: "延时毫秒模糊", answer: p.answer, delay: p.delay, at: p.at }; }
+  if (n.精准[e]) { const p = parseStoredEntry(n.精准[e]); return { type: "精准", answer: p.answer, delay: 0, at: p.at, mention: p.mention }; }
+  for (const t of Object.keys(n.模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.模糊[t]); return { type: "模糊", answer: p.answer, delay: 0, at: p.at, mention: p.mention }; }
+  if (n.延时精准[e]) { const p = parseStoredEntry(n.延时精准[e]); return { type: "延时精准", answer: p.answer, delay: p.delay * 1000, at: p.at, mention: p.mention }; }
+  for (const t of Object.keys(n.延时模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.延时模糊[t]); return { type: "延时模糊", answer: p.answer, delay: p.delay * 1000, at: p.at, mention: p.mention }; }
+  if (n.延时毫秒精准[e]) { const p = parseStoredEntry(n.延时毫秒精准[e]); return { type: "延时毫秒精准", answer: p.answer, delay: p.delay, at: p.at, mention: p.mention }; }
+  for (const t of Object.keys(n.延时毫秒模糊)) if (t && e.includes(t)) { const p = parseStoredEntry(n.延时毫秒模糊[t]); return { type: "延时毫秒模糊", answer: p.answer, delay: p.delay, at: p.at, mention: p.mention }; }
   return null;
 }
 
@@ -819,7 +918,7 @@ function l(n, e) { return `- ${kn(n, e)}`; }
 
 function ke(n) {
   const e = j(n);
-  return e ? `<@${e}>` : "";
+  return e ? 艾特标签(e) : "";
 }
 
 function tn(n, e) {
@@ -829,17 +928,13 @@ function tn(n, e) {
 }
 
 async function _(n, e, t, r, o) {
-  const cost = Date.now() - (t._startTime || Date.now());
-  const finalText = `${r}\n> 响应用时: ${cost}ms`;
-  return G(n, e, tn(t, finalText), o);
+  return G(n, e, tn(t, `${r}${耗时后缀()}`), o);
 }
 
 async function je(n, e, t, r, o) { const i = await _(n, e, t, r); return en(n, e, i, Z(n, o)), i; }
 
 async function Pe(n, e, t, r, o) {
-  const cost = Date.now() - (t._startTime || Date.now());
-  const finalText = `${r}\n> 响应用时: ${cost}ms`;
-  const i = await _e(n, e, tn(t, finalText));
+  const i = await _e(n, e, tn(t, `${r}${耗时后缀()}`));
   return en(n, e, i, Z(n, o)), i;
 }
 
@@ -1186,16 +1281,21 @@ function F(n) { return n === "全局" || n === "私聊" ? n : "本群"; }
 
 async function Je(n, e, t, r) {
   const o = yn(e);
-  let c = (r && r.trim()) || "";
-  if (!c) {
+  // 保留空格：只用 trim 判断是否为空，真正入库的 c 原样保留（含前后/中间空格）
+  let c = typeof r === "string" ? r : "";
+  if (!c.trim()) {
     const i = o.match(Le), s = o.match(De);
-    i ? c = o.slice(i[0].length) : c = "", c = c.trim();
+    c = i ? o.slice(i[0].length) : "";
   }
+  c = 剥艾特标记(c); // 去掉 <qqbot-at-user …/> / <@openid>，openid 另存元数据
   let a = [];
   try { a = await Se(n, e); } catch (f) { return { ok: !1, error: f?.message || "图片下载失败，添加已取消" }; }
   let u = c;
   for (const f of a) u += `[img:${f}]`;
-  return u.length ? t.trim() ? { ok: !0, content: u } : { ok: !1, error: "必填参数缺失！请带上问题。" } : { ok: !1, error: "答案不能为空～文字或图片至少要有一样哦" };
+  const 被艾特 = 取被艾特者(e);
+  // 只有艾特没有文字也算有效答案：回复时会渲染成 @用户 标签
+  const 有内容 = u.trim().length > 0 || 被艾特.length > 0;
+  return 有内容 ? t.trim() ? { ok: !0, content: u, mention: 被艾特[0] || "" } : { ok: !1, error: "必填参数缺失！请带上问题。" } : { ok: !1, error: "答案不能为空～文字或图片至少要有一样哦" };
 }
 
 async function fn(n, e, t, r, o, i, s, c, delay = 0, atOverride = undefined) {
@@ -1209,6 +1309,7 @@ async function fn(n, e, t, r, o, i, s, c, delay = 0, atOverride = undefined) {
     let finalContent = a.content;
     if (delay > 0) finalContent = `${finalContent}\u0000${delay}`;
     if (at !== undefined) finalContent = `${finalContent}\u0001at=${at ? 1 : 0}`;
+    if (a.mention) finalContent = `${finalContent}\u0002mention=${a.mention}`;
     qn(n, i, fileSuffix, s, finalContent);
     const f = F(i), p = await An(n, a.content, 96);
     const 明细 = [`**问：** ${s}`, `**答：** ${p}`];
@@ -1480,8 +1581,7 @@ async function We(n, e, t) {
   if (r === "我的账号") {
     const openid = j(e);
     if (!openid) { await G(n, t, "无法获取你的 OpenID，请稍后再试。"); return true; }
-    const cost = Date.now() - (e._startTime || Date.now());
-    const content = `${ke(e)}\n${反馈("我的 OpenID", [`\`${openid}\``])}\n> 响应用时: ${cost}ms`;
+    const content = `${ke(e)}\n${反馈("我的 OpenID", [`\`${openid}\``])}${耗时后缀()}`;
     await G(n, t, content);
     return true;
   }
@@ -1679,12 +1779,20 @@ async function Ye(n, e, t) {
   const o = t.scope === "group" ? S(e) || "unknown" : "私聊", i = Ee(n, r, o);
   if (i == null) return !1;
   const atReply = i.at !== undefined ? i.at : getAtReplySetting(n, t);
-  const prefix = atReply ? `${ke(e)}` : "";
-  let answerText = i.answer;
-  if (atReply) {
-    const cost = Date.now() - (e._startTime || Date.now());
-    answerText += `\n> 响应用时: ${cost}ms`;
+  const 被艾特 = R(i.mention);
+  const 纯文本 = !v(i.answer).some((x) => x.kind === "img");
+
+  let prefix = "";
+  if (被艾特) {
+    // 答案中带被艾特用户：
+    //  · 纯文本答案 → 只艾特被艾特者
+    //  · 非纯文本（含图片）→ 同时艾特触发者 + 被艾特者（共 2 人）
+    prefix = 纯文本 ? 艾特标签(被艾特) : `${ke(e)} ${艾特标签(被艾特)}`.trim();
+  } else if (atReply) {
+    prefix = `${ke(e)}`;
   }
+  let answerText = i.answer;
+  if (atReply) answerText += 耗时后缀();
   if (i.delay > 0) await new Promise(resolve => setTimeout(resolve, i.delay));
   const s = await we(n, t, v(answerText), prefix);
   en(n, t, s, Z(n, i.scope)), !0;
@@ -1717,6 +1825,7 @@ async function nt(n) { he(), n.logger?.info?.("[GF_qa] 插件已卸载"); }
 async function et(n, e) {
   if (!e || typeof e != "object" || (dn(e, n.logger), !ne(e))) return;
   e._startTime = Date.now();
+  标记请求开始(e);
   let t;
   try { t = ee(e); }
   catch (r) { n.logger?.warn?.("[GF_qa] 无法解析发送目标:", r?.message || r); return; }
