@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.8";
+  return "1.3.9";
 }
 
 function getConfig(n) {
@@ -1481,7 +1481,12 @@ async function 切换更新源(n, e, t, 参数 = "") {
 }
 
 async function We(n, e, t) {
-  const r = stripSlash(yn(e));
+  // 命令匹配与答案保留分开：trimEnd 只用于匹配指令（否则「 /问答系统 」尾部空格会让正则不匹配），
+  // 原串 rRaw 保留空格，供添加问答时原样入库。
+  const rRaw = stripSlash(yn(e));
+  const r = rRaw.trimEnd();
+  // 被 trimEnd 去掉的尾部空白，回填到答案里，保证「#答案 」的空格原样入库
+  const 尾空白 = rRaw.slice(r.length);
   if (!r) return !1;
 
   // ============ 在线更新（仅主人） ============
@@ -1722,7 +1727,7 @@ async function We(n, e, t) {
 
   const cMs = r.match(EeMs);
   if (cMs) {
-    const op = cMs[1], type = cMs[2], q = String(cMs[3] || ""), ans = String(cMs[4] || "");
+    const op = cMs[1], type = cMs[2], q = String(cMs[3] || ""), ans = String(cMs[4] || "") + 尾空白;
     if (op === "添加" && t.scope === "group" && !B(n, e) || (op !== "添加" && !B(n, e) && !Y(n, e))) return true;
     if (t.scope !== "group") return true;
     if (op === "添加") {
@@ -1740,7 +1745,7 @@ async function We(n, e, t) {
 
   const cDelay = r.match(Ee2);
   if (cDelay) {
-    const op = cDelay[1], type = cDelay[2], q = String(cDelay[3] || ""), ans = String(cDelay[4] || "");
+    const op = cDelay[1], type = cDelay[2], q = String(cDelay[3] || ""), ans = String(cDelay[4] || "") + 尾空白;
     if (op === "添加" && t.scope === "group" && !B(n, e) || (op !== "添加" && !B(n, e) && !Y(n, e))) return true;
     if (t.scope !== "group") return true;
     if (op === "添加") {
@@ -1759,14 +1764,14 @@ async function We(n, e, t) {
   const cNormal = r.match(Oe);
   if (cNormal) {
     if (!Y(n, e)) return !0;
-    const u = cNormal[1], f = cNormal[2], p = cNormal[3], y = String(cNormal[4] || ""), g = String(cNormal[5] || "");
+    const u = cNormal[1], f = cNormal[2], p = cNormal[3], y = String(cNormal[4] || ""), g = String(cNormal[5] || "") + 尾空白;
     return fn(n, e, t, u, p, f, y, g, 0);
   }
 
   const a = r.match(Te);
   if (a) {
     if (t.scope !== "group" || !B(n, e)) return !0;
-    const u = a[1], f = a[2], p = String(a[3] || ""), y = String(a[4] || ""), g = S(e) || "unknown";
+    const u = a[1], f = a[2], p = String(a[3] || ""), y = String(a[4] || "") + 尾空白, g = S(e) || "unknown";
     return fn(n, e, t, u, f, g, p, y, 0);
   }
 
