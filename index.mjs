@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.4";
+  return "1.3.5";
 }
 
 function getConfig(n) {
