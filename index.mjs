@@ -21,7 +21,7 @@ function 本插件版本(n) {
     }
   } catch {}
   try { return R(JSON.parse(w.readFileSync(new URL("./package.json", import.meta.url), "utf8")).version); } catch {}
-  return "1.3.9";
+  return "1.3.10";
 }
 
 function getConfig(n) {
@@ -437,24 +437,45 @@ function yn(n) {
     .replace(/^[\r\n]+|[\r\n]+$/g, "");
 }
 
-/** 从 event.mentions[] 取被艾特者 OpenID（官方字段：群聊用 member_openid，不含机器人自身）；
- *  宿主未透传 mentions 时，退回解析正文里的艾特标记。 */
-function 取被艾特者(n) {
-  const 列 = Array.isArray(n?.mentions) ? n.mentions : [];
+/**
+ * 从答案和 event 里取真正的「被艾特者」OpenID。
+ * 关键：必须排除机器人自身与触发者——否则「@机器人 添加…#答案#@某人」会把开头的 @机器人
+ * 当成被艾特者（现象：命中后只 @机器人自己，不是答案里设置的人）。
+ * 优先级：答案正文里的 @标记 → event.mentions[] → 剥掉机器人头后的正文。
+ */
+function 取被艾特者(n, 答案文本 = '') {
+  const 排除 = new Set();
+  const 配置机器人 = R(getConfig(n).botOpenId);
+  if (配置机器人) 排除.add(配置机器人);
+  const 头 = String(n?.content ?? '').match(/^(?:<qqbot-at-user[^>]*id=["']([^"']+)["'][^>]*>|<@!?([A-Za-z0-9_-]+)>)/i);
+  const 头ID = R((头 && (头[1] || 头[2])) || '');
+  if (头ID) 排除.add(头ID);
+  const 触发 = R((n?.author?.member_openid) || (n?.author?.user_openid) || j(n));
+  if (触发) 排除.add(触发);
+
   const 结果 = [];
-  for (const m of 列) {
+  const 收 = (id) => {
+    id = R(id);
+    if (id && !排除.has(id) && !结果.includes(id)) 结果.push(id);
+  };
+  const 收标记 = (文) => {
+    const s = String(文 || '');
+    for (const x of s.match(/<qqbot-at-user[^>]*id=["']([^"']+)["'][^>]*>/gi) || []) 收((x.match(/id=["']([^"']+)["']/i) || [])[1]);
+    for (const x of s.match(/<@!?([A-Za-z0-9_-]+)>/g) || []) 收(x.replace(/<@!?|>/g, ''));
+  };
+
+  // ① 答案正文里 @ 了谁（最准确：直接对应「设置的答案」）
+  收标记(答案文本);
+  // ② 官方 mentions[]（群聊用 member_openid；个别宿主会把机器人也放进来，靠上面的排除集合过滤）
+  for (const m of (Array.isArray(n?.mentions) ? n.mentions : [])) {
     if (!m || m.bot === true || m.is_you === true) continue;
-    const id = R(m.member_openid || m.user_openid || m.id || m.union_openid);
-    if (id && !结果.includes(id)) 结果.push(id);
+    收(m.member_openid || m.user_openid || m.id || m.union_openid);
   }
+  // ③ 兜底：剥掉开头机器人 @ 的正文，只看最后一个 # 之后的答案段
   if (!结果.length) {
-    const 正文 = String(n?.content ?? "");
-    const 标记 = 正文.match(/<qqbot-at-user[^>]*id=["']([^"']+)["'][^>]*>/gi) || [];
-    const 旧标 = 正文.match(/<@!?([A-Za-z0-9_-]+)>/g) || [];
-    for (const x of [...标记, ...旧标]) {
-      const id = R((x.match(/id=["']([^"']+)["']/i) || [])[1] || x.replace(/<@!?|>/g, ""));
-      if (id && !结果.includes(id)) 结果.push(id);
-    }
+    const 正 = String(n?.content ?? '').replace(开头机器人艾特, '');
+    const i = 正.lastIndexOf('#');
+    收标记(i >= 0 ? 正.slice(i + 1) : 正);
   }
   return 结果;
 }
@@ -1292,10 +1313,10 @@ async function Je(n, e, t, r) {
   try { a = await Se(n, e); } catch (f) { return { ok: !1, error: f?.message || "图片下载失败，添加已取消" }; }
   let u = c;
   for (const f of a) u += `[img:${f}]`;
-  const 被艾特 = 取被艾特者(e);
+  const 被艾特 = 取被艾特者(e, r);
   // 只有艾特没有文字也算有效答案：回复时会渲染成 @用户 标签
   const 有内容 = u.trim().length > 0 || 被艾特.length > 0;
-  return 有内容 ? t.trim() ? { ok: !0, content: u, mention: 被艾特[0] || "" } : { ok: !1, error: "必填参数缺失！请带上问题。" } : { ok: !1, error: "答案不能为空～文字或图片至少要有一样哦" };
+  return 有内容 ? t.trim() ? { ok: !0, content: u, mention: 被艾特.join(",") } : { ok: !1, error: "必填参数缺失！请带上问题。" } : { ok: !1, error: "答案不能为空～文字或图片至少要有一样哦" };
 }
 
 async function fn(n, e, t, r, o, i, s, c, delay = 0, atOverride = undefined) {
@@ -1785,14 +1806,16 @@ async function Ye(n, e, t) {
   if (i == null) return !1;
   // 回复模式（截图里的「纯文本 / 带艾特」）：单条答案后缀 > 范围模式 > 全局模式
   const atReply = i.at !== undefined ? i.at : getAtReplySetting(n, t);
-  const 被艾特 = R(i.mention);
+  // 支持多个被艾特者：元数据里用英文逗号分隔，逐个生成官方 <qqbot-at-user> 标签
+  const 被艾特组 = String(i.mention || '').split(',').map((x) => R(x)).filter(Boolean);
+  const 艾特串 = 被艾特组.map(艾特标签).filter(Boolean).join(' ');
 
   let prefix = "";
-  if (被艾特) {
+  if (艾特串) {
     // 答案中带被艾特用户时：
-    //  · 回复模式=纯文本 → 只艾特答案里的那个人
-    //  · 回复模式=带艾特（非纯文本）→ 同时艾特触发者 + 答案里的那个人（共 2 人）
-    prefix = atReply ? `${ke(e)} ${艾特标签(被艾特)}`.trim() : 艾特标签(被艾特);
+    //  · 回复模式=纯文本 → 只艾特答案里的那些人（全部）
+    //  · 回复模式=带艾特 → 同时艾特触发者 + 答案里的所有人
+    prefix = atReply ? `${ke(e)} ${艾特串}`.trim() : 艾特串;
   } else if (atReply) {
     prefix = `${ke(e)}`;
   }

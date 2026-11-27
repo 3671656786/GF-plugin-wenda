@@ -1,8 +1,8 @@
 # 问答系统 · 使用说明（QQ 官方机器人）
 
-![版本](https://img.shields.io/badge/version-1.3.9-blue)
+![版本](https://img.shields.io/badge/version-1.3.10-blue)
 
-> 版本：**1.3.9**  
+> 版本：**1.3.10**  
 > 插件目录：`GF-plugin-wenda`  
 > 显示名：问答系统  
 > 原作者：三个句号，二改作者：天道化逍遥  
