@@ -55,6 +55,10 @@ const CSS = `.qa-admin{--ink:#0b1220;--text:#0f172a;--heading:#1e293b;--muted:#6
 .qa-admin .chip.ok{background:#0596691f;color:var(--ok)}
 .qa-admin .chip.warn{background:#b453091f;color:var(--warn)}
 .qa-admin .chip.fail{background:#dc26261f;color:var(--fail)}
+.qa-admin .progress{height:10px;border-radius:999px;background:#0f172a12;overflow:hidden;border:1px solid rgba(255,255,255,.35)}
+.qa-admin .progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#2dd4bf);transition:width .3s}
+.qa-admin .progress.fail>i{background:linear-gradient(90deg,#b91c1c,#dc2626)}
+.qa-admin .progress.done>i{background:linear-gradient(90deg,#047857,#10b981)}
 .qa-admin input,.qa-admin select,.qa-admin textarea{border:1px solid rgba(255,255,255,.45);background:#fff3;border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;color:var(--text);outline:none}
 .qa-admin input:focus,.qa-admin select:focus,.qa-admin textarea:focus{box-shadow:0 0 0 2px #14b8a647}
 .qa-admin .search{min-width:180px}
@@ -128,6 +132,7 @@ export default function WendaConsole(props) {
   const [令牌信息, set令牌信息] = useState({ 已设置: false, 掩码: '' });
   const [显示令牌, set显示令牌] = useState(false);
   const [额度, set额度] = useState(null);
+  const [进度, set进度] = useState(null);
 
   const 提示 = useCallback((文, 错误 = false) => {
     setToast({ 文: String(文 || ''), 错误 });
@@ -177,6 +182,25 @@ export default function WendaConsole(props) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (已登录) 刷新(); }, [页签, 范围, 刷新]);
+
+  // 在线更新实时进度：安装期间每 400ms 轮询，停止后补一次刷新
+  useEffect(() => {
+    if (!已登录) return undefined;
+    let 活 = true;
+    let 上一轮进行中 = false;
+    const 拉 = async () => {
+      try {
+        const p = await api('/update/progress');
+        if (!活) return;
+        set进度(p);
+        if (p.进行中) 上一轮进行中 = true;
+        else if (上一轮进行中) { 上一轮进行中 = false; 刷新(); }
+      } catch { /* 轮询失败不打断界面 */ }
+    };
+    拉();
+    const 定时器 = setInterval(拉, 400);
+    return () => { 活 = false; clearInterval(定时器); };
+  }, [已登录, api, 刷新]);
   useEffect(() => {
     if (已登录 && 页签 === 'security') {
       (async () => {
@@ -367,6 +391,15 @@ export default function WendaConsole(props) {
             h('button', { className: 'btn btn-secondary', disabled: 忙 || !检查结果 || 检查结果.有更新 !== true, onClick: 安装更新 }, '⬆️ 安装更新')
           ),
           h('div', { className: 'quote', style: { marginTop: 12 } }, `阶段：${(更新态 && 更新态.阶段) || '未开始'}　${(更新态 && 更新态.错误) || ''}`),
+          进度 && (进度.进行中 || (进度.阶段 === '完成' || 进度.阶段 === '失败') && 进度.更新时间 && Date.now() - 进度.更新时间 < 8000)
+            ? h('div', { style: { marginTop: 12 } },
+                h('div', { className: 'row', style: { marginTop: 0, justifyContent: 'space-between' } },
+                  h('span', { className: `chip ${进度.阶段 === '失败' ? 'fail' : 进度.阶段 === '完成' ? 'ok' : 'group'}` }, 进度.阶段 || '准备中'),
+                  h('span', { style: { color: '#64748b', fontSize: 12 } }, `${进度.百分比 || 0}%`)),
+                h('div', { className: `progress${进度.阶段 === '失败' ? ' fail' : 进度.阶段 === '完成' ? ' done' : ''}`, style: { marginTop: 8 } },
+                  h('i', { style: { width: `${进度.百分比 || 0}%` } })),
+                h('div', { className: 'quote', style: { marginTop: 8 } }, 进度.说明 || (进度.进行中 ? '正在更新…' : '')))
+            : null,
           检查结果 ? h('div', { style: { marginTop: 10 } },
             h('a', { href: 检查结果.页面, target: '_blank', rel: 'noreferrer' }, 检查结果.页面),
             h('div', { className: 'quote', style: { marginTop: 8, maxHeight: 130, overflow: 'auto' } }, 检查结果.说明 || '（无说明）')
